@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {filterSessions,classify,rowErrors,normalizeExtracted,validInstagram,actorOptions} from '../src/lib/domain.js';
-import {demoProductions,demoSessions} from '../src/lib/demo.js';
+import {demoProductions,demoSessions} from './fixtures/demo.js';
 const p=demoProductions[0],rows=demoSessions.filter(r=>r.production_id===p.id);
 test('same-role OR and cross-role AND with stable chronological ordering',()=>{
  const found=filterSessions(rows,{actors:{서윤:['한서아','윤채린'],도현:['강도원']}});

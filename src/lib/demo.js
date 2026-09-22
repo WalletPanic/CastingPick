@@ -1,8 +1,4 @@
-const stamp='2026-09-22T00:00:00.000Z';
-export const demoProductions=[
-{id:'moon-garden',title:'달빛의 정원',subtitle:'서로의 계절이 되어준 두 사람',venue:'아르테홀',start_date:'2026-10-01',end_date:'2026-11-29',roles:['서윤','도현','은별','정원사'],motif:'moon',updated_at:stamp},
-{id:'last-letter',title:'마지막 편지',subtitle:'끝내 부치지 못한 마음의 이야기',venue:'스튜디오 소극장',start_date:'2026-10-02',end_date:'2026-12-20',roles:['연우','하진','우체부'],motif:'letter',updated_at:stamp},
-{id:'blue-hour',title:'푸른 시간',subtitle:'우리의 밤은 아직 끝나지 않았다',venue:'온스테이지',start_date:'2026-10-05',end_date:'2026-11-15',roles:['수현','지오','해인'],motif:'blue',updated_at:stamp}];
-const data=[['03','14:00','한서아','강도원','최유주','정태오'],['03','19:00','윤채린','박시우','김나연','정태오'],['04','14:00','한서아','박시우','김나연','이재하'],['09','19:30','이하린','강도원','최유주','이재하'],['10','14:00','윤채린','강도원','김나연','정태오'],['11','18:00','한서아','강도원','최유주','이재하'],['17','14:00','이하린','박시우','김나연','정태오'],['18','18:00','한서아','박시우','최유주','이재하']];
-export const demoSessions=[...data.map(([day,time,...actors],i)=>({id:`moon-${i}`,production_id:'moon-garden',starts_at:`2026-10-${day}T${time}:00`,cast:actors.map((actor,j)=>({role:demoProductions[0].roles[j],actor})),updated_at:stamp})),...demoProductions.slice(1).flatMap((p,k)=>[0,1,2].map(i=>({id:`${p.id}-${i}`,production_id:p.id,starts_at:`2026-10-${String(10+i*3).padStart(2,'0')}T${i===1?'19':'14'}:00:00`,cast:p.roles.map((role,j)=>({role,actor:[['김서우','이도하','정유진'],['신아린','문지호','서하늘']][k][j]})),updated_at:stamp})))];
-export function demoImport(production,existing){const first=existing[0];return [first?{...structuredClone(first),id:crypto.randomUUID()}:{id:crypto.randomUUID(),production_id:production.id,starts_at:production.start_date+'T14:00:00',cast:production.roles.map(role=>({role,actor:'배우 입력'}))},...(existing[1]?[{...structuredClone(existing[1]),id:crypto.randomUUID(),cast:existing[1].cast.map((c,i)=>({...c,actor:i===0?'서예린':c.actor}))}]:[]),{id:crypto.randomUUID(),production_id:production.id,starts_at:production.end_date+'T19:00:00',cast:production.roles.map((role,i)=>({role,actor:['한서아','강도원','최유주','정태오'][i]||'배우 입력'}))}];}
+import data from '../../data/elisabeth-2026.json';
+export const demoProductions=[data.production];
+export const demoSessions=data.performances;
+export function demoImport(production,existing){return existing.slice(0,3).map(row=>({...structuredClone(row),id:crypto.randomUUID()}));}
