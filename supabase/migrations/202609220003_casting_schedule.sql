@@ -1,5 +1,5 @@
 -- Existing schedules are treated as the first release; correct them when needed.
-alter table public.performances add column casting_round integer not null default 1 check (casting_round >= 1);
+alter table public.performances add column if not exists casting_round integer not null default 1 check (casting_round >= 1);
 
 create or replace function public.commit_import(
  p_production_id uuid,p_rows jsonb,p_source_url text default null,p_source_path text default null
@@ -56,7 +56,7 @@ grant execute on function public.commit_import(uuid,jsonb,text,text) to authenti
 
 -- Role numbering follows production.roles, never JSON array order.
 -- Invoker security preserves the underlying tables' RLS policies.
-create view public.casting_schedule with (security_invoker = true) as
+create or replace view public.casting_schedule with (security_invoker = true) as
 select s.id as performance_id, p.id as production_id,
  p.title as production_title,
  extract(year from p.start_date)::integer as production_year,
