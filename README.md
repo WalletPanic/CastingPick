@@ -169,3 +169,24 @@ git push -u origin feat/mobile-casting-app
 ```
 
 데모 빌드를 한 파일로 내보내려면 환경 변수를 비운 상태로 빌드한 뒤 `node scripts/export-preview.mjs preview.html`을 실행하세요. 운영 환경값을 넣은 빌드는 데모 미리보기로 배포하지 마세요.
+
+
+## 캐스팅 스케줄 표
+
+`202609220003_casting_schedule.sql` 마이그레이션을 적용하면 Supabase의 `casting_schedule` 뷰에서 한 행에 한 공연 회차를 확인할 수 있습니다. 기존 DB에는 앞선 마이그레이션 적용 후 추가 실행하세요. 새 DB에는 모든 마이그레이션을 파일명 순서대로 적용하세요.
+
+| 컬럼 | 의미 |
+|---|---|
+| production_title | 공연명 |
+| production_year | 시즌 시작 연도 (연말을 넘겨도 동일) |
+| theater_name | 극장 |
+| casting_round | 1차·2차 캐스팅 스케줄 공개분 |
+| performance_date | 공연 날짜 |
+| performance_time | 공연 시간 (한국 시간) |
+| lead_1_character / lead_1_actor | 첫 번째 배역 / 배우 |
+| lead_2_character / lead_2_actor | 두 번째 배역 / 배우 |
+| full_cast | 전체 배역·배우 목록 |
+
+첫 번째·두 번째 배역은 공연 등록 시 입력한 배역 순서로 결정됩니다. 주연부터 입력하세요. 배역이 하나면 두 번째 값은 NULL입니다. 전체 배역은 `full_cast`에 유지됩니다.
+
+관리자 등록 화면에서 공개 차수를 입력하면 검수 후 저장하는 모든 회차에 적용됩니다. 같은 날짜·시간에 새 공개 차수를 저장하면 기존 회차의 차수를 갱신합니다. 이 뷰는 최신 상태를 보여주며 공개분별 과거 스냅샷을 보관하지 않습니다. 기존 데이터의 차수는 1로 초기화되므로 필요한 회차는 올바른 차수로 다시 저장하세요. 뷰는 조회용이며 입력은 관리자 화면을 이용하세요.

@@ -26,3 +26,13 @@ test('extraction does not silently fill missing actor or date',()=>{
 });
 test('Instagram URLs enforce HTTPS and exact host',()=>{assert.ok(validInstagram('https://www.instagram.com/p/ABC_123/?igsh=x'));assert.ok(!validInstagram('https://instagram.com.evil.example/p/ABC'));assert.ok(!validInstagram('javascript:alert(1)'));assert.ok(!validInstagram('https://www.instagram.com/user/'));});
 test('actor options are unique and role-specific',()=>{assert.deepEqual(actorOptions(rows,p.roles)['서윤'],['윤채린','이하린','한서아'])});
+
+test('schedule release changes are saved even when the cast is unchanged',()=>{
+ assert.equal(classify({...rows[0],casting_round:2},rows),'changed');
+ assert.equal(classify({...rows[0],casting_round:1},rows),'duplicate');
+ assert.equal(classify({...rows[0],casting_round:2},[{...rows[0],casting_round:2}]),'duplicate');
+});
+test('schedule release must be a positive PostgreSQL integer',()=>{
+ for(const casting_round of [0,-1,1.5,'',2147483648]) assert.ok(rowErrors([{...rows[0],casting_round}],p)[0].some(e=>e.includes('공개 차수')));
+ assert.equal(rowErrors([{...rows[0],casting_round:2}],p)[0].length,0);
+});

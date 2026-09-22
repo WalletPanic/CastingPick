@@ -16,12 +16,14 @@ export function actorOptions(rows, roles) {
 export function castKey(cast) { return JSON.stringify(cast.map(c=>({role:c.role.trim(),actor:c.actor.trim()})).sort((a,b)=>a.role.localeCompare(b.role)||a.actor.localeCompare(b.actor))); }
 export function classify(row,existing){
   const previous=existing.find(s=>s.starts_at===row.starts_at);
-  return !previous?'new':castKey(previous.cast)===castKey(row.cast)?'duplicate':'changed';
+  return !previous?'new':castKey(previous.cast)===castKey(row.cast)&&(previous.casting_round??1)===(row.casting_round??1)?'duplicate':'changed';
 }
 export function rowErrors(rows,production) {
   const seen=new Set();
   return rows.map(row=>{
     const errors=[];const value=row.starts_at;
+    const round=row.casting_round??1;
+    if(!Number.isInteger(round)||round<1||round>2147483647)errors.push('공개 차수는 1 이상의 정수로 입력해주세요.');
     const date=datePart(value); const parsed=new Date(`${date}T12:00:00Z`);
     if(!/^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d:00$/.test(value)||!Number.isFinite(parsed.getTime())||parsed.toISOString().slice(0,10)!==date)errors.push('날짜와 시간을 확인해주세요.');
     if(date<production.start_date||date>production.end_date)errors.push('공연 기간 밖의 날짜예요.');
