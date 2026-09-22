@@ -32,3 +32,17 @@ export async function analyze(file,production){
  return parse(await fetch(`${url}/functions/v1/analyze-schedule`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${access}`},body}));
 }
 export async function uploadSource(file){if(!file)return null;const access=await token();const path=`${session.user.id}/${crypto.randomUUID()}.${file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg'}`;await parse(await fetch(`${url}/storage/v1/object/casting-sources/${path}`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${access}`,'Content-Type':file.type},body:file}));return path;}
+
+export async function signUp(email,password){const data=await parse(await fetch(`${url}/auth/v1/signup`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password})}));if(data.access_token)remember(data);return data;}
+export const getSubmissions=()=>allRows('/rest/v1/schedule_submissions?select=*&order=created_at.desc,id.asc');
+export async function submitSchedule({production_id,title,source_url,files}){
+ const access=await token();if(!access)throw new Error('로그인이 필요합니다.');
+ const id=crypto.randomUUID(),paths=[];
+ try{
+  for(const file of files){const path=`${session.user.id}/${id}/${crypto.randomUUID()}.${file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg'}`;
+   await parse(await fetch(`${url}/storage/v1/object/schedule-submissions/${path}`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${access}`,'Content-Type':file.type},body:file}));paths.push(path);
+  }
+  return await request('/rest/v1/schedule_submissions',{method:'POST',headers:{Prefer:'return=representation'},body:{id,submitted_by:session.user.id,production_id:production_id||null,title,source_url:source_url||null,image_paths:paths}});
+ }catch(error){if(paths.length)await request('/storage/v1/object/schedule-submissions',{method:'DELETE',body:{prefixes:paths}}).catch(()=>{});throw error;}
+}
+export async function submissionImage(path){const access=await token();const res=await fetch(`${url}/storage/v1/object/authenticated/schedule-submissions/${path}`,{headers:{apikey:key,Authorization:`Bearer ${access}`}});if(!res.ok)throw new Error('원본을 불러오지 못했습니다.');return res.blob();}
