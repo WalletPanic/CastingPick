@@ -8,3 +8,5 @@
 .poster-image{display:block;width:100%;height:auto;aspect-ratio:1000/1425;object-fit:contain;border-radius:16px;background:#17121e;transition:transform .2s}.production-card:hover .poster-image{transform:translateY(-4px)}.detail-poster{width:160px;height:auto;border-radius:12px;margin-left:20px}.schedule-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.schedule-meta span{font-size:10px;color:var(--plum);background:var(--lilac);padding:4px 7px;border-radius:5px}@media(max-width:760px){.detail-poster{width:95px;border-radius:8px}.poster-image{border-radius:12px}}
 
 .date-options{display:flex;flex-wrap:wrap;column-gap:20px}
+
+.ticket-round-filter{margin-top:24px}

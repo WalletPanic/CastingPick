@@ -45,3 +45,11 @@ test('upcoming sessions use Korea time and exclude the exact start instant',()=>
  assert.deepEqual(filterSessions(list,{showPast:true,now,to:'2026-09-23'}),list.slice(0,2));
  assert.deepEqual(filterSessions(list,{showPast:false,now:Date.parse('2026-09-23T10:00:00Z')}),list.slice(2));
 });
+
+test('ticket rounds combine as OR and intersect date, actor and past filters',()=>{
+ const list=[{starts_at:'2026-09-01T14:00:00',casting_round:1,cast:[{role:'토드',actor:'카이'}]},{starts_at:'2026-10-03T14:00:00',casting_round:4,cast:[{role:'토드',actor:'김준수'}]},{starts_at:'2026-10-24T14:00:00',casting_round:5,cast:[{role:'토드',actor:'김준수'}]}];
+ assert.deepEqual(filterSessions(list,{rounds:[1,5]}),[list[0],list[2]]);
+ assert.deepEqual(filterSessions(list,{rounds:[1,5],showPast:false,now:Date.parse('2026-09-23T00:00:00Z')}),[list[2]]);
+ assert.deepEqual(filterSessions(list,{rounds:[4,5],actors:{토드:['김준수']},to:'2026-10-10'}),[list[1]]);
+ assert.deepEqual(filterSessions(list,{rounds:[]}),list);
+});
