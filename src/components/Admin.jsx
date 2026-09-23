@@ -19,8 +19,8 @@ export default function Admin({productions,sessions,demo,user,admin,onLogin,onSa
  const totals={new:0,duplicate:0,changed:0};included.forEach(r=>totals[classify(r,baseline)]++);
  function changeProduction(id){setProductionId(id);setCastingRound(1);setRows(null);setSaved(null);setError('');setExcluded([]);setFile(null);setSource('');}
  function acceptFile(value){if(!value)return; if(!['image/png','image/jpeg','image/webp'].includes(value.type)||value.size>8*1024*1024){setError('PNG, JPG, WEBP 파일을 8MB 이하로 올려주세요.');return;}setFile(value);setRows(null);setSaved(null);setError('');}
- function startReview(values){setBaseline(structuredClone(existing));setRows(values);setExcluded([]);setSaved(null);setError('');}
- async function analyze(){if(!file||!production)return;setBusy(true);setError('');try{const data=await api.analyze(file,production);startReview(normalizeExtracted(data,production));}catch(e){setError(e.message)}finally{setBusy(false)}}
+ function startReview(values){if(!production?.roles.length){setError('시간표 등록 전 공연 배역 설정이 필요합니다.');return;}setBaseline(structuredClone(existing));setRows(values);setExcluded([]);setSaved(null);setError('');}
+ async function analyze(){if(!file||!production)return;if(!production.roles.length){setError('시간표 분석 전 공연 배역 설정이 필요합니다.');return;}setBusy(true);setError('');try{const data=await api.analyze(file,production);startReview(normalizeExtracted(data,production));}catch(e){setError(e.message)}finally{setBusy(false)}}
  function edit(id,key,value,role){setRows(old=>old.map(row=>row.id!==id?row:{...row,...(key==='cast'?{cast:row.cast.map(c=>c.role===role?{...c,actor:value}:c)}:{starts_at:key==='date'?`${value}T${timePart(row.starts_at)}:00`:`${datePart(row.starts_at)}T${value}:00`})}));setError('');}
  function addRow(){setRows(old=>[...(old||[]),{id:crypto.randomUUID(),production_id:productionId,starts_at:production.start_date+'T14:00:00',cast:production.roles.map(role=>({role,actor:''}))}]);}
  async function save(){
@@ -37,7 +37,7 @@ export default function Admin({productions,sessions,demo,user,admin,onLogin,onSa
  <div className="stepper"><span className={!rows&&!saved?'current':''}>01 등록</span><span className={rows?'current':''}>02 검수</span><span className={saved?'current':''}>03 완료</span></div>
  <div className="admin-toolbar"><label>공연 선택<select disabled={busy} value={productionId} onChange={e=>changeProduction(e.target.value)}><option value="" disabled>공연을 선택해주세요</option>{productions.map(p=><option key={p.id} value={p.id}>{p.title} · {p.venue}</option>)}</select></label><button className="secondary" onClick={()=>setCreating(!creating)}><Icon name="plus" size={16}/>공연 추가</button></div>
  <label className="source-label">캐스팅 스케줄 공개 차수<input type="number" min="1" max="2147483647" step="1" value={castingRound} disabled={busy} onChange={e=>setCastingRound(e.target.value===''?'':Number(e.target.value))}/></label><p className="helper">1차·2차 등 스케줄 공개분을 입력하세요. 이번에 저장하는 모든 회차에 적용됩니다.</p>
- {creating&&<ProductionForm onCreate={async value=>{const p=await onCreate(value);setCreating(false);changeProduction(p.id)}}/>}
+ {creating&&<ProductionForm onCreate={async value=>{const p=await onCreate(value);setCreating(false);changeProduction(p.id);notify('공연이 등록되어 사이트에 게시됐어요.');location.hash=`/show/${p.id}`}}/>}
  {error&&<p role="alert" className="error">{error}</p>}
  {saved?<div className="completion panel"><div className="completion-icon"><Icon name="check" size={30}/></div><h2>시간표가 준비됐어요</h2><p>신규 {saved.new}회 · 변경 {saved.changed}회 · 중복 제외 {saved.duplicate}회</p><a className="primary" href={`#/show/${productionId}`}>등록한 공연 확인<Icon name="arrow" size={16}/></a><button className="text-button" onClick={()=>{setSaved(null);setFile(null);setSource('')}}>다른 시간표 등록</button></div>:production&&<>
  {!rows?<div className="panel upload-panel"><label className="upload-zone" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();acceptFile(e.dataTransfer.files[0])}}><Icon name="upload" size={28}/><strong>{file?file.name:'캐스팅표 이미지를 올려주세요'}</strong><span>사진 선택 또는 드래그 · JPG, PNG, WEBP · 최대 8MB</span><input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>acceptFile(e.target.files[0])}/></label>{preview&&<img className="source-preview" src={preview} alt="업로드한 캐스팅표"/>}<label className="source-label">인스타 출처 링크 <span className="optional">선택</span><input type="url" placeholder="https://www.instagram.com/p/..." value={source} onChange={e=>setSource(e.target.value)}/></label><p className="helper">링크는 출처로 보관해요. 인스타 사진 자동 수집은 지원하지 않으니 캐스팅표 이미지를 함께 올려주세요.</p>
@@ -49,4 +49,21 @@ export default function Admin({productions,sessions,demo,user,admin,onLogin,onSa
  </>}
  </section>
 }
-function ProductionForm({onCreate}){const [error,setError]=useState(''),[busy,setBusy]=useState(false);return <form className="panel form-stack" onSubmit={async e=>{e.preventDefault();const form=new FormData(e.currentTarget);const roles=String(form.get('roles')).split(',').map(s=>s.trim()).filter(Boolean);if(new Set(roles).size!==roles.length||!roles.length){setError('배역을 중복 없이 입력해주세요.');return;}if(form.get('start_date')>form.get('end_date')){setError('종료일은 시작일 이후여야 해요.');return;}setBusy(true);setError('');try{await onCreate({title:form.get('title').trim(),venue:form.get('venue').trim(),start_date:form.get('start_date'),end_date:form.get('end_date'),roles,subtitle:form.get('subtitle').trim(),motif:'moon'});}catch(e){setError(e.message)}finally{setBusy(false)}}}><h2>새 공연 · 시즌</h2><label>공연명<input name="title" required maxLength={120}/></label><label>짧은 소개<input name="subtitle" maxLength={160}/></label><label>공연장<input name="venue" required maxLength={120}/></label><div className="two-columns"><label>시작일<input type="date" name="start_date" required/></label><label>종료일<input type="date" name="end_date" required/></label></div><label>배역 · 쉼표로 구분<input name="roles" placeholder="서윤, 도현, 은별, 정원사" required/></label>{error&&<p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy?'등록 중…':'공연 등록'}</button></form>}
+function ProductionForm({onCreate}){
+ const [error,setError]=useState(''),[busy,setBusy]=useState(false),[poster,setPoster]=useState(null),[preview,setPreview]=useState('');
+ useEffect(()=>{if(!poster){setPreview('');return;}const url=URL.createObjectURL(poster);setPreview(url);return()=>URL.revokeObjectURL(url)},[poster]);
+ return <form className="panel form-stack" onSubmit={async e=>{
+  e.preventDefault();setError('');const form=new FormData(e.currentTarget);
+  const title=String(form.get('title')).trim(),venue=String(form.get('venue')).trim();
+  if(!title||!venue){setError('작품명과 공연장을 입력해주세요.');return;}
+  if(form.get('start_date')>form.get('end_date')){setError('종료일은 시작일 이후여야 해요.');return;}
+  if(!poster||!['image/png','image/jpeg','image/webp'].includes(poster.type)||poster.size>8*1024*1024){setError('포스터는 JPG·PNG·WEBP 형식으로 8MB 이하로 올려주세요.');return;}
+  const roles=String(form.get('roles')||'').split(',').map(s=>s.trim()).filter(Boolean);
+  if(new Set(roles).size!==roles.length||roles.length>30||roles.some(r=>r.length>80)){setError('배역은 중복 없이 최대 30개, 각각 80자 이하로 입력해주세요.');return;}
+  setBusy(true);let uploaded;
+  try{
+   uploaded=await api.uploadPoster(poster);
+   await onCreate({title,venue,start_date:form.get('start_date'),end_date:form.get('end_date'),roles,subtitle:'',motif:'moon',poster_url:uploaded.url});
+  }catch(e){if(uploaded)await api.removePoster(uploaded.path).catch(()=>{});setError(e.message);}finally{setBusy(false)}
+ }}><h2>신규 공연 추가</h2><p className="helper">등록하면 공연 목록에 바로 표시됩니다. 캐스팅 시간표는 이후에 추가할 수 있어요.</p><label>작품명<input name="title" required maxLength={120} disabled={busy}/></label><label>공연장<input name="venue" required maxLength={120} disabled={busy}/></label><div className="two-columns"><label>공연 시작일<input type="date" name="start_date" required disabled={busy}/></label><label>공연 종료일<input type="date" name="end_date" required disabled={busy}/></label></div><label>포스터<input type="file" accept="image/png,image/jpeg,image/webp" required disabled={busy} onChange={e=>setPoster(e.target.files[0]||null)}/></label>{preview&&<img className="source-preview" src={preview} alt="등록할 공연 포스터 미리보기"/>}<details><summary>배역 입력 (선택)</summary><label>배역 · 쉼표로 구분<input name="roles" placeholder="엘리자벳, 토드, 루케니" disabled={busy}/></label></details>{error&&<p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy?'등록 중…':'공연 등록 · 사이트에 게시'}</button></form>
+}
