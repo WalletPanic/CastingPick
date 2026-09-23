@@ -36,3 +36,12 @@ test('schedule release must be a positive PostgreSQL integer',()=>{
  for(const casting_round of [0,-1,1.5,'',2147483648]) assert.ok(rowErrors([{...rows[0],casting_round}],p)[0].some(e=>e.includes('공개 차수')));
  assert.equal(rowErrors([{...rows[0],casting_round:2}],p)[0].length,0);
 });
+
+test('upcoming sessions use Korea time and exclude the exact start instant',()=>{
+ const list=['2026-09-23T14:00:00','2026-09-23T19:00:00','2026-09-24T14:00:00'].map(starts_at=>({starts_at,cast:[]}));
+ const now=Date.parse('2026-09-23T05:00:00Z');
+ assert.deepEqual(filterSessions(list,{showPast:false,now}),list.slice(1));
+ assert.deepEqual(filterSessions(list,{showPast:true,now}),list);
+ assert.deepEqual(filterSessions(list,{showPast:true,now,to:'2026-09-23'}),list.slice(0,2));
+ assert.deepEqual(filterSessions(list,{showPast:false,now:Date.parse('2026-09-23T10:00:00Z')}),list.slice(2));
+});

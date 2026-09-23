@@ -3,10 +3,10 @@ export const timePart = value => value.slice(11, 16);
 export const koreaDate = (date) => new Date(`${date}T12:00:00+09:00`);
 export const weekday = date => new Intl.DateTimeFormat('ko-KR', {weekday:'short',timeZone:'Asia/Seoul'}).format(koreaDate(date));
 export const sortSessions = rows => [...rows].sort((a,b)=>a.starts_at.localeCompare(b.starts_at));
-export function filterSessions(rows, {actors={},from='',to='',weekends=false}={}) {
+export function filterSessions(rows, {actors={},from='',to='',weekends=false,showPast=true,now=Date.now()}={}) {
   return sortSessions(rows.filter(row=>{
     const date=datePart(row.starts_at);
-    return (!from||date>=from)&&(!to||date<=to)&&(!weekends||['토','일'].includes(weekday(date)))&&
+    return (showPast||Date.parse(`${row.starts_at}+09:00`)>now)&&(!from||date>=from)&&(!to||date<=to)&&(!weekends||['토','일'].includes(weekday(date)))&&
       Object.entries(actors).every(([role,names])=>!names.length||row.cast.some(c=>c.role===role&&names.includes(c.actor)));
   }));
 }
