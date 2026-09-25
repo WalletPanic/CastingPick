@@ -25,7 +25,7 @@ export const getPerformances=()=>allRows('/rest/v1/performances?select=*&order=s
 export const getFavorites=()=>allRows('/rest/v1/favorites?select=performance_id&order=performance_id.asc').then(rows=>rows.map(r=>r.performance_id));
 export const saveFavorite=(id,selected)=>request(`/rest/v1/favorites${selected?'':`?performance_id=eq.${id}`}`,{method:selected?'POST':'DELETE',...(selected?{body:{user_id:session.user.id,performance_id:id},headers:{Prefer:'resolution=ignore-duplicates'}}:{})});
 export const addProduction=data=>request('/rest/v1/productions',{method:'POST',body:data,headers:{Prefer:'return=representation'}}).then(rows=>rows[0]);
-export const commitImport=body=>request('/rest/v1/rpc/commit_import',{method:'POST',body});
+export const commitImport=body=>request('/rest/v1/rpc/commit_import_with_roles',{method:'POST',body});
 export async function analyze(file,production){
  const access=await token();if(!access)throw new Error('관리자 로그인이 필요해요.');
  const body=new FormData();body.append('image',file);body.append('production_id',production.id);

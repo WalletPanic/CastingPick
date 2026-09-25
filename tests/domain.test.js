@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {filterSessions,classify,rowErrors,normalizeExtracted,validInstagram,actorOptions} from '../src/lib/domain.js';
+import {filterSessions,classify,rowErrors,normalizeExtracted,extractedRoles,validInstagram,actorOptions} from '../src/lib/domain.js';
 import {demoProductions,demoSessions} from './fixtures/demo.js';
 const p=demoProductions[0],rows=demoSessions.filter(r=>r.production_id===p.id);
 test('same-role OR and cross-role AND with stable chronological ordering',()=>{
@@ -52,4 +52,16 @@ test('ticket rounds combine as OR and intersect date, actor and past filters',()
  assert.deepEqual(filterSessions(list,{rounds:[1,5],showPast:false,now:Date.parse('2026-09-23T00:00:00Z')}),[list[2]]);
  assert.deepEqual(filterSessions(list,{rounds:[4,5],actors:{토드:['김준수']},to:'2026-10-10'}),[list[1]]);
  assert.deepEqual(filterSessions(list,{rounds:[]}),list);
+});
+
+test('detects header roles for a new production without discarding actors',()=>{
+ const production={...p,roles:[]};
+ const input={roles:['시드니 칼튼','찰스 다네이'],performances:[{date:'2026-11-11',time:'19:30',cast:[{role:'시드니 칼튼',actor:'신성록'},{role:'찰스 다네이',actor:'백형훈'}]}]};
+ const roles=extractedRoles(input,production);
+ assert.deepEqual(roles,input.roles);
+ assert.deepEqual(normalizeExtracted(input,{...production,roles})[0].cast,input.performances[0].cast);
+ assert.throws(()=>extractedRoles({...input,roles:['시드니 칼튼','시드니 칼튼']},production));
+ assert.throws(()=>extractedRoles(input,{...production,roles:['다른 배역']}));
+ assert.throws(()=>extractedRoles({...input,performances:[{cast:[]}]},production));
+ assert.deepEqual(extractedRoles(input,{...production,roles:[...input.roles].reverse()}),[...input.roles].reverse());
 });

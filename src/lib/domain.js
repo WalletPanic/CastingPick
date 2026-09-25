@@ -45,3 +45,12 @@ export function validInstagram(value){
   if(!value)return true;
   try{const u=new URL(value);return u.protocol==='https:'&&['instagram.com','www.instagram.com'].includes(u.hostname)&&/^\/(p|reel)\/[A-Za-z0-9_-]+\/?$/.test(u.pathname);}catch{return false;}
 }
+
+export function extractedRoles(input,production){
+ const roles=input?.roles;
+ if(!Array.isArray(roles)||!roles.length||roles.length>30||roles.some(r=>typeof r!=='string'||!r.trim()||r.trim().length>80)||new Set(roles.map(r=>r.trim())).size!==roles.length)throw new Error('배역명을 읽지 못했거나 중복되어 있어요. 표 머리글이 선명한 사진으로 다시 올려주세요.');
+ const clean=roles.map(r=>r.trim());
+ if(production.roles.length&&(clean.length!==production.roles.length||clean.some(r=>!production.roles.includes(r))))throw new Error('이미지의 배역과 등록된 배역이 다릅니다. 올바른 공연의 캐스팅표인지 확인해주세요.');
+ if(!Array.isArray(input.performances)||input.performances.some(row=>!Array.isArray(row.cast)||row.cast.length!==clean.length||clean.some(role=>row.cast.filter(c=>c.role===role).length!==1)))throw new Error('회차별 배역을 정확히 읽지 못했어요. 다른 사진으로 다시 분석해주세요.');
+ return production.roles.length?production.roles:clean;
+}
