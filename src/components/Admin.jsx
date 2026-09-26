@@ -1,5 +1,6 @@
 import {useEffect,useMemo,useState} from 'react';
 import Icon from './Icon';
+import EditExisting from './EditExisting';
 import {classify,datePart,timePart,rowErrors,normalizeExtracted,extractedRoles,validInstagram} from '../lib/domain';
 import {demoImport} from '../lib/demo';
 import * as api from '../lib/api';
@@ -13,13 +14,14 @@ export default function Admin({productions,sessions,demo,user,admin,onLogin,onSa
  const [castingRound,setCastingRound]=useState(1);
  const [file,setFile]=useState(null),[preview,setPreview]=useState(''),[source,setSource]=useState('');
  const [rows,setRows]=useState(null),[baseline,setBaseline]=useState([]),[excluded,setExcluded]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[saved,setSaved]=useState(null);
+ const [editing,setEditing]=useState(false);
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[creating,setCreating]=useState(false);
  useEffect(()=>{if(!file){setPreview('');return;}const url=URL.createObjectURL(file);setPreview(url);return()=>URL.revokeObjectURL(url)},[file]);
  const reviewRows=(rows||[]).map(r=>({...r,casting_round:castingRound}));
  const included=reviewRows.filter(r=>!excluded.includes(r.id));
  const errors=production?rowErrors(included,reviewProduction):[];
  const totals={new:0,duplicate:0,changed:0};included.forEach(r=>totals[classify(r,baseline)]++);
- function changeProduction(id){setCreating(false);setProductionId(id);setDetectedRoles([]);setCastingRound(1);setRows(null);setSaved(null);setError('');setExcluded([]);setFile(null);setSource('');}
+ function changeProduction(id){setEditing(false);setCreating(false);setProductionId(id);setDetectedRoles([]);setCastingRound(1);setRows(null);setSaved(null);setError('');setExcluded([]);setFile(null);setSource('');}
  function acceptFile(value){if(!value)return; if(!['image/png','image/jpeg','image/webp'].includes(value.type)||value.size>8*1024*1024){setError('PNG, JPG, WEBP 파일을 8MB 이하로 올려주세요.');return;}setFile(value);setDetectedRoles([]);setRows(null);setSaved(null);setError('');}
  function startReview(values){setBaseline(structuredClone(existing));setRows(values);setExcluded([]);setSaved(null);setError('');}
  async function analyze(){if(!file||!production)return;setBusy(true);setError('');try{const data=await api.analyze(file,production);const roles=extractedRoles(data,production);setDetectedRoles(roles);startReview(normalizeExtracted(data,{...production,roles}));}catch(e){setError(e.message)}finally{setBusy(false)}}
@@ -36,11 +38,13 @@ export default function Admin({productions,sessions,demo,user,admin,onLogin,onSa
  if(!demo&&!user)return <section className="page narrow"><div className="eyebrow">ADMIN</div><h1>캐스팅표 등록</h1><p className="muted">관리자 계정으로 로그인해주세요.</p><form className="panel form-stack" onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');try{await onLogin(email,password)}catch(e){setError('로그인하지 못했어요. 이메일과 비밀번호를 확인해주세요.')}finally{setBusy(false)}}}><label>이메일<input type="email" required autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)}/></label><label>비밀번호<input type="password" required autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{error&&<p role="alert" className="error">{error}</p>}<button className="primary" disabled={busy}>{busy?'로그인 중…':'관리자 로그인'}</button></form></section>;
  if(!demo&&!admin)return <section className="page"><div className="empty"><Icon name="user" size={28}/><h2>관리자 권한이 필요해요</h2><p>현재 계정은 공연을 등록할 수 없습니다.</p></div></section>;
  return <section className="page admin-page"><div className="page-title"><div><div className="eyebrow">CASTING STUDIO</div><h1>캐스팅표 등록</h1></div><span className="pill">{demo?'데모 관리자':'관리자'}</span></div><p className="intro-copy">새로운 시간표를, 새로운 관극으로.<br/>원본과 비교하고 확인한 회차만 저장하세요.</p>
- {!creating&&<div className="stepper"><span className={!rows&&!saved?'current':''}>01 등록</span><span className={rows?'current':''}>02 검수</span><span className={saved?'current':''}>03 완료</span></div>}
- <div className="admin-toolbar"><label>공연 선택<select disabled={busy} value={creating?'':productionId} onChange={e=>changeProduction(e.target.value)}><option value="" disabled>공연을 선택해주세요</option>{productions.map(p=><option key={p.id} value={p.id}>{p.title} · {p.venue}</option>)}</select></label><button className="secondary" disabled={busy} onClick={()=>{setCreating(!creating);setError('')}}><Icon name="plus" size={16}/>{creating?'캐스팅표 등록으로 돌아가기':'공연 추가'}</button></div>
+ {!creating&&!editing&&<div className="stepper"><span className={!rows&&!saved?'current':''}>01 등록</span><span className={rows?'current':''}>02 검수</span><span className={saved?'current':''}>03 완료</span></div>}
+ <div className="admin-toolbar"><label>공연 선택<select disabled={busy} value={creating?'':productionId} onChange={e=>changeProduction(e.target.value)}><option value="" disabled>공연을 선택해주세요</option>{productions.map(p=><option key={p.id} value={p.id}>{p.title} · {p.venue}</option>)}</select></label><button className="secondary" disabled={busy} onClick={()=>{setEditing(false);setCreating(!creating);setError('')}}><Icon name="plus" size={16}/>{creating?'캐스팅표 등록으로 돌아가기':'공연 추가'}</button></div>
 
  {creating&&<ProductionForm onCreate={async value=>{const p=await onCreate(value);setCreating(false);changeProduction(p.id);notify('공연이 등록되어 사이트에 게시됐어요.');location.hash=`/show/${p.id}`}}/>}
- {!creating&&<>
+ {!creating&&production&&!demo&&<button className="secondary" disabled={busy} onClick={()=>setEditing(!editing)}>{editing?'캐스팅표 등록으로 돌아가기':'등록된 공연·회차 수정'}</button>}
+ {editing&&production&&<EditExisting key={production.id} production={production} sessions={existing} onSaved={onSaved} notify={notify}/>}
+ {!creating&&!editing&&<>
  <label className="source-label">캐스팅 스케줄 공개 차수<input type="number" min="1" max="2147483647" step="1" value={castingRound} disabled={busy} onChange={e=>setCastingRound(e.target.value===''?'':Number(e.target.value))}/></label><p className="helper">1차·2차 등 스케줄 공개분을 입력하세요. 이번에 저장하는 모든 회차에 적용됩니다.</p>
  {error&&<p role="alert" className="error">{error}</p>}
  {saved?<div className="completion panel"><div className="completion-icon"><Icon name="check" size={30}/></div><h2>시간표가 준비됐어요</h2><p>신규 {saved.new}회 · 변경 {saved.changed}회 · 중복 제외 {saved.duplicate}회</p><a className="primary" href={`#/show/${productionId}`}>등록한 공연 확인<Icon name="arrow" size={16}/></a><button className="text-button" onClick={()=>{setSaved(null);setFile(null);setSource('')}}>다른 시간표 등록</button></div>:production&&<>

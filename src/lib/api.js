@@ -55,3 +55,6 @@ export async function uploadPoster(file){
  return {path,url:`${url}/storage/v1/object/public/production-posters/${path}`};
 }
 export const removePoster=path=>request('/storage/v1/object/production-posters',{method:'DELETE',body:{prefixes:[path]}});
+
+export const editProduction=(id,expected,data)=>request('/rest/v1/rpc/edit_production',{method:'POST',body:{p_id:id,p_expected:expected,p_data:data}});
+export const editPerformance=(id,expected,data)=>request('/rest/v1/rpc/edit_performance',{method:'POST',body:{p_id:id,p_expected:expected,p_data:data}});

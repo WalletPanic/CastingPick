@@ -1,0 +1,33 @@
+begin;
+do $$
+declare pid uuid; sid uuid; stamp timestamptz; admin_id uuid; result jsonb; blocked boolean;
+begin
+ select user_id into admin_id from public.admin_users limit 1;
+ if admin_id is null then raise exception 'Missing admin'; end if;
+ perform set_config('request.jwt.claim.sub',admin_id::text,true);
+ insert into public.productions(title,venue,start_date,end_date,roles) values('__edit_test__','test','2026-11-01','2026-11-30',array['주연']) returning id,updated_at into pid,stamp;
+ result:=public.edit_production(pid,stamp,'{"title":"수정 검증","venue":"새 극장","start_date":"2026-11-01","end_date":"2026-11-30","poster_url":"https://example.com/poster.png"}');
+ if result->>'title'<>'수정 검증' then raise exception 'Production edit failed'; end if;
+ blocked:=false;
+ begin perform public.edit_production(pid,stamp,'{}'); exception when others then blocked:=true; end;
+ if not blocked then raise exception 'Stale edit accepted'; end if;
+ insert into public.performances(production_id,starts_at,"cast",casting_round) values(pid,'2026-11-11T19:00:00','[{"role":"주연","actor":"기존"}]',1) returning id,updated_at into sid,stamp;
+ insert into public.favorites(user_id,performance_id) values(admin_id,sid);
+ result:=public.edit_performance(sid,stamp,'{"starts_at":"2026-11-12T19:30:00","casting_round":2,"cast":[{"role":"주연","actor":"수정 배우"}]}');
+ if result->>'id'<>sid::text or result->>'casting_round'<>'2' or not exists(select 1 from public.favorites where performance_id=sid) then raise exception 'Identity preservation failed'; end if;
+ stamp:=(result->>'updated_at')::timestamptz;
+ insert into public.performances(production_id,starts_at,"cast") values(pid,'2026-11-13T19:30:00','[{"role":"주연","actor":"기존"}]');
+ blocked:=false;
+ begin perform public.edit_performance(sid,stamp,'{"starts_at":"2026-11-13T19:30:00","casting_round":2,"cast":[{"role":"주연","actor":"수정 배우"}]}'); exception when others then blocked:=true; end;
+ if not blocked then raise exception 'Duplicate accepted'; end if;
+ blocked:=false;
+ begin perform public.edit_production(pid,(select updated_at from public.productions where id=pid),'{"title":"test","venue":"test","start_date":"2026-11-20","end_date":"2026-11-30"}'); exception when others then blocked:=true; end;
+ if not blocked then raise exception 'Out of season accepted'; end if;
+ if (select count(*) from public.admin_edit_logs where entity_id in(pid,sid))<>2 then raise exception 'Audit missing'; end if;
+ perform set_config('request.jwt.claim.sub','',true);
+ blocked:=false;
+ begin perform public.edit_performance(sid,stamp,'{}'); exception when insufficient_privilege then blocked:=true; end;
+ if not blocked then raise exception 'Unauthorized accepted'; end if;
+end $$;
+rollback;
+select 'PASS: metadata, schedule edits, favorites preserved, conflicts, period bounds, audit, admin check; all test data rolled back' as result;
