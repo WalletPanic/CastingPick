@@ -12,3 +12,5 @@
 .ticket-round-filter{margin-top:24px}
 
 .detail-edit-button{margin-top:16px}.edit-dialog{width:min(720px,calc(100vw - 32px));max-height:calc(100dvh - 48px);padding:24px;border:1px solid var(--line);border-radius:18px;background:var(--paper);color:var(--ink);overflow:auto;box-shadow:0 24px 80px #30263344}.edit-dialog::backdrop{background:#21172588}.edit-dialog-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}.edit-dialog-header h2{overflow-wrap:anywhere}.edit-dialog-header button{flex-shrink:0}.edit-dialog .panel{margin-top:16px}@media(max-width:760px){.edit-dialog{padding:18px;max-height:calc(100dvh - 24px)}.edit-dialog .admin-toolbar{align-items:stretch}.edit-dialog .admin-toolbar button{flex:1}}
+
+.delete-production-area{border-top:1px solid var(--line);padding-top:20px;margin-top:8px}.danger-button{color:var(--danger)}.primary.danger-button{background:var(--danger);border-color:var(--danger);color:white}.delete-confirmation p{font-size:13px;margin:12px 0}.delete-confirmation .admin-toolbar{margin-bottom:0}

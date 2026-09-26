@@ -10,8 +10,8 @@ export function filterSessions(rows, {actors={},from='',to='',rounds=[],weekends
       Object.entries(actors).every(([role,names])=>!names.length||row.cast.some(c=>c.role===role&&names.includes(c.actor)));
   }));
 }
-export function actorOptions(rows, roles) {
-  return Object.fromEntries(roles.map(role=>[role,[...new Set(rows.flatMap(s=>s.cast.filter(c=>c.role===role).map(c=>c.actor)))].sort((a,b)=>a.localeCompare(b,'ko'))]));
+export function actorOptions(rows, roles=[]) {
+  return Object.fromEntries((roles??[]).map(role=>[role,[...new Set(rows.flatMap(s=>s.cast.filter(c=>c.role===role).map(c=>c.actor)))].sort((a,b)=>a.localeCompare(b,'ko'))]));
 }
 export function castKey(cast) { return JSON.stringify(cast.map(c=>({role:c.role.trim(),actor:c.actor.trim()})).sort((a,b)=>a.role.localeCompare(b.role)||a.actor.localeCompare(b.actor))); }
 export function classify(row,existing){

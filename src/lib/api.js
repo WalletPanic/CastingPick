@@ -19,7 +19,7 @@ export async function request(path,{method='GET',body,headers={}}={}){const acce
 export async function signIn(email,password){const data=await parse(await fetch(`${url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password})}));remember(data);}
 export async function signOut(){try{await request('/auth/v1/logout',{method:'POST'});}finally{remember(null);}}
 export const isAdmin=()=>request('/rest/v1/rpc/is_admin',{method:'POST',body:{}});
-export const getProductions=()=>allRows('/rest/v1/productions?select=*&order=start_date.asc,id.asc');
+export const getProductions=()=>allRows('/rest/v1/productions?select=*&order=start_date.asc,id.asc').then(rows=>rows.map(p=>({...p,roles:Array.isArray(p.roles)?p.roles:[],filter_roles:Array.isArray(p.filter_roles)?p.filter_roles:null})));
 async function allRows(path){let result=[];for(let offset=0;;offset+=500){const rows=await request(`${path}&limit=500&offset=${offset}`);result.push(...rows);if(rows.length<500)return result;}}
 export const getPerformances=()=>allRows('/rest/v1/performances?select=*&order=starts_at.asc,id.asc');
 export const getFavorites=()=>allRows('/rest/v1/favorites?select=performance_id&order=performance_id.asc').then(rows=>rows.map(r=>r.performance_id));
@@ -58,3 +58,5 @@ export const removePoster=path=>request('/storage/v1/object/production-posters',
 
 export const editProduction=(id,expected,data)=>request('/rest/v1/rpc/edit_production',{method:'POST',body:{p_id:id,p_expected:expected,p_data:data}});
 export const editPerformance=(id,expected,data)=>request('/rest/v1/rpc/edit_performance',{method:'POST',body:{p_id:id,p_expected:expected,p_data:data}});
+
+export const deleteProduction=(id,expected)=>request('/rest/v1/rpc/delete_production',{method:'POST',body:{p_id:id,p_expected:expected}});

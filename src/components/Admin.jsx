@@ -63,12 +63,11 @@ function ProductionForm({onCreate}){
   if(!title||!venue){setError('작품명과 공연장을 입력해주세요.');return;}
   if(form.get('start_date')>form.get('end_date')){setError('종료일은 시작일 이후여야 해요.');return;}
   if(!poster||!['image/png','image/jpeg','image/webp'].includes(poster.type)||poster.size>8*1024*1024){setError('포스터는 JPG·PNG·WEBP 형식으로 8MB 이하로 올려주세요.');return;}
-  const roles=String(form.get('roles')||'').split(',').map(s=>s.trim()).filter(Boolean);
-  if(new Set(roles).size!==roles.length||roles.length>30||roles.some(r=>r.length>80)){setError('배역은 중복 없이 최대 30개, 각각 80자 이하로 입력해주세요.');return;}
+  const roles=[];
   setBusy(true);let uploaded;
   try{
    uploaded=await api.uploadPoster(poster);
    await onCreate({title,venue,start_date:form.get('start_date'),end_date:form.get('end_date'),roles,subtitle:'',motif:'moon',poster_url:uploaded.url});
   }catch(e){if(uploaded)await api.removePoster(uploaded.path).catch(()=>{});setError(e.message);}finally{setBusy(false)}
- }}><h2>신규 공연 추가</h2><p className="helper">등록하면 공연 목록에 바로 표시됩니다. 캐스팅 시간표는 이후에 추가할 수 있어요.</p><label>작품명<input name="title" required maxLength={120} disabled={busy}/></label><label>공연장<input name="venue" required maxLength={120} disabled={busy}/></label><div className="two-columns"><label>공연 시작일<input type="date" name="start_date" required disabled={busy}/></label><label>공연 종료일<input type="date" name="end_date" required disabled={busy}/></label></div><label>포스터<input type="file" accept="image/png,image/jpeg,image/webp" required disabled={busy} onChange={e=>setPoster(e.target.files[0]||null)}/></label>{preview&&<img className="source-preview" src={preview} alt="등록할 공연 포스터 미리보기"/>}<details><summary>배역 입력 (선택)</summary><label>배역 · 쉼표로 구분<input name="roles" placeholder="엘리자벳, 토드, 루케니" disabled={busy}/></label></details>{error&&<p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy?'등록 중…':'공연 등록 · 사이트에 게시'}</button></form>
+ }}><h2>신규 공연 추가</h2><p className="helper">등록하면 공연 목록에 바로 표시됩니다. 캐스팅 시간표는 이후에 추가할 수 있어요.</p><label>작품명<input name="title" required maxLength={120} disabled={busy}/></label><label>공연장<input name="venue" required maxLength={120} disabled={busy}/></label><div className="two-columns"><label>공연 시작일<input type="date" name="start_date" required disabled={busy}/></label><label>공연 종료일<input type="date" name="end_date" required disabled={busy}/></label></div><label>포스터<input type="file" accept="image/png,image/jpeg,image/webp" required disabled={busy} onChange={e=>setPoster(e.target.files[0]||null)}/></label>{preview&&<img className="source-preview" src={preview} alt="등록할 공연 포스터 미리보기"/>}{error&&<p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy?'등록 중…':'공연 등록 · 사이트에 게시'}</button></form>
 }

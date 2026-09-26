@@ -65,3 +65,5 @@ test('detects header roles for a new production without discarding actors',()=>{
  assert.throws(()=>extractedRoles({...input,performances:[{cast:[]}]},production));
  assert.deepEqual(extractedRoles(input,{...production,roles:[...input.roles].reverse()}),[...input.roles].reverse());
 });
+
+test('missing roles do not crash actor options',()=>{assert.deepEqual(actorOptions([],null),{});assert.deepEqual(actorOptions([],[]),{});});

@@ -42,7 +42,7 @@ function Detail({production,sessions,favorites,onFavorite,admin,onSaved,notify})
  const [actors,setActors]=useState({}),[from,setFrom]=useState(''),[to,setTo]=useState(''),[weekends,setWeekends]=useState(false),[upcomingOnly,setUpcomingOnly]=useState(false),[rounds,setRounds]=useState([]),[now,setNow]=useState(Date.now);
  useEffect(()=>{const refresh=()=>setNow(Date.now());const timer=setInterval(refresh,1000);window.addEventListener('focus',refresh);return()=>{clearInterval(timer);window.removeEventListener('focus',refresh)}},[]);
  const availableRounds=useMemo(()=>[...new Set(sessions.map(s=>s.casting_round??1))].sort((a,b)=>a-b),[sessions]);
- const filterRoles=production.filter_roles??production.roles;
+ const filterRoles=(production.filter_roles??production.roles??[]).filter(role=>(production.roles??[]).includes(role));
  const options=useMemo(()=>actorOptions(sessions,production.roles),[sessions,production.roles]);
  const invalid=Boolean(from&&to&&from>to);const filtered=invalid?[]:filterSessions(sessions,{actors,from,to,weekends,showPast:!upcomingOnly,now,rounds});const count=Object.values(actors).reduce((n,a)=>n+a.length,0);
  function toggle(role,name){setActors(old=>({...old,[role]:old[role]?.includes(name)?old[role].filter(n=>n!==name):[...(old[role]||[]),name]}))}
