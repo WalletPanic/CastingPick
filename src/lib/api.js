@@ -1,3 +1,4 @@
+import {isExistingSignup} from './auth.js';
 import {readLocal,writeLocal} from './storage';
 const url=import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/,'');
 const key=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -7,7 +8,7 @@ const sessionKey='castingpick.auth.v1';
 let session=readLocal(sessionKey,null), refreshing=null;
 export const getSession=()=>session;
 function remember(data){session=data?{...data,expires_at:Math.floor(Date.now()/1000)+data.expires_in}:null;writeLocal(sessionKey,session);window.dispatchEvent(new Event('castingpick-auth'));}
-async function parse(response){const text=await response.text();let data;try{data=text?JSON.parse(text):null;}catch{throw new Error('서버 응답을 읽지 못했습니다.');}if(!response.ok)throw new Error(data?.error_description||data?.message||data?.error||`요청 실패 (${response.status})`);return data;}
+async function parse(response){const text=await response.text();let data;try{data=text?JSON.parse(text):null;}catch{throw new Error('서버 응답을 읽지 못했습니다.');}if(!response.ok){const error=new Error(data?.error_description||data?.message||data?.msg||data?.error||`요청 실패 (${response.status})`);error.code=data?.error_code||data?.code;throw error;}return data;}
 async function token(){
  if(session&&session.expires_at<Date.now()/1000+60){
   if(!refreshing)refreshing=fetch(`${url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})}).then(parse).then(remember).catch(e=>{remember(null);throw e;}).finally(()=>refreshing=null);
@@ -33,7 +34,7 @@ export async function analyze(file,production){
 }
 export async function uploadSource(file){if(!file)return null;const access=await token();const path=`${session.user.id}/${crypto.randomUUID()}.${file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg'}`;await parse(await fetch(`${url}/storage/v1/object/casting-sources/${path}`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${access}`,'Content-Type':file.type},body:file}));return path;}
 
-export async function signUp(email,password){const data=await parse(await fetch(`${url}/auth/v1/signup`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password})}));if(data.access_token)remember(data);return data;}
+export async function signUp(email,password){const data=await parse(await fetch(`${url}/auth/v1/signup`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password})}));if(isExistingSignup(data)){const error=new Error('이미 가입된 계정입니다. 로그인해주세요.');error.code='user_already_exists';throw error;}if(data.access_token)remember(data);return data;}
 export const getSubmissions=()=>allRows('/rest/v1/schedule_submissions?select=*&order=created_at.desc,id.asc');
 export async function submitSchedule({production_id,title,source_url,files}){
  const access=await token();if(!access)throw new Error('로그인이 필요합니다.');
