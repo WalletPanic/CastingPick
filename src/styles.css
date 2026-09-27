@@ -16,3 +16,5 @@
 .delete-production-area{border-top:1px solid var(--line);padding-top:20px;margin-top:8px}.danger-button{color:var(--danger)}.primary.danger-button{background:var(--danger);border-color:var(--danger);color:white}.delete-confirmation p{font-size:13px;margin:12px 0}.delete-confirmation .admin-toolbar{margin-bottom:0}
 
 .filter-role-settings{border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px}.filter-role-settings legend{font-size:14px;font-weight:600;padding:0 6px}.filter-role-options{display:flex;flex-wrap:wrap;gap:12px 20px}
+
+.submission-card{border-top:1px solid var(--line);padding-top:18px;display:grid;gap:10px}.submission-heading{display:flex;justify-content:space-between;gap:12px;align-items:center}.submission-source{color:var(--plum);font-size:14px;font-weight:600;overflow-wrap:anywhere}.submission-source span{display:block;font-size:12px;font-weight:400;margin-top:4px;text-decoration:underline}

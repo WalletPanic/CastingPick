@@ -1,3 +1,4 @@
+import {validSubmissionSource} from './submissions.js';
 import {isExistingSignup} from './auth.js';
 import {readLocal,writeLocal} from './storage';
 const url=import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/,'');
@@ -36,7 +37,8 @@ export async function uploadSource(file){if(!file)return null;const access=await
 
 export async function signUp(email,password){const data=await parse(await fetch(`${url}/auth/v1/signup`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password})}));if(isExistingSignup(data)){const error=new Error('이미 가입된 계정입니다. 로그인해주세요.');error.code='user_already_exists';throw error;}if(data.access_token)remember(data);return data;}
 export const getSubmissions=()=>allRows('/rest/v1/schedule_submissions?select=*&order=created_at.desc,id.asc');
-export async function submitSchedule({production_id,title,source_url,files}){
+export async function submitSchedule({production_id,title,source_url,files=[]}){
+ if(!validSubmissionSource(source_url))throw new Error('올바른 출처 링크를 입력해주세요.');
  const access=await token();if(!access)throw new Error('로그인이 필요합니다.');
  const id=crypto.randomUUID(),paths=[];
  try{
