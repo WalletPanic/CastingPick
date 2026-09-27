@@ -35,8 +35,8 @@ export async function analyze(file,production){
 }
 export async function uploadSource(file){if(!file)return null;const access=await token();const path=`${session.user.id}/${crypto.randomUUID()}.${file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg'}`;await parse(await fetch(`${url}/storage/v1/object/casting-sources/${path}`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${access}`,'Content-Type':file.type},body:file}));return path;}
 
-export async function signUp(email,password){const data=await parse(await fetch(`${url}/auth/v1/signup`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password})}));if(isExistingSignup(data)){const error=new Error('이미 가입된 계정입니다. 로그인해주세요.');error.code='user_already_exists';throw error;}if(data.access_token)remember(data);return data;}
-export const getSubmissions=()=>allRows('/rest/v1/schedule_submissions?select=*&order=created_at.desc,id.asc');
+export async function signUp(email,password,nickname){const data=await parse(await fetch(`${url}/auth/v1/signup`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password,data:{nickname}})}));if(isExistingSignup(data)){const error=new Error('이미 가입된 계정입니다. 로그인해주세요.');error.code='user_already_exists';throw error;}if(data.access_token)remember(data);return data;}
+export const getSubmissions=()=>allRows('/rest/v1/submissions_with_members?select=*&order=created_at.desc,id.asc');
 export async function submitSchedule({production_id,title,source_url,files=[]}){
  if(!validSubmissionSource(source_url))throw new Error('올바른 출처 링크를 입력해주세요.');
  const access=await token();if(!access)throw new Error('로그인이 필요합니다.');
@@ -63,3 +63,7 @@ export const editProduction=(id,expected,data)=>request('/rest/v1/rpc/edit_produ
 export const editPerformance=(id,expected,data)=>request('/rest/v1/rpc/edit_performance',{method:'POST',body:{p_id:id,p_expected:expected,p_data:data}});
 
 export const deleteProduction=(id,expected)=>request('/rest/v1/rpc/delete_production',{method:'POST',body:{p_id:id,p_expected:expected}});
+
+export const getProfile=()=>request(`/rest/v1/member_profiles?user_id=eq.${session.user.id}&select=nickname`).then(rows=>rows[0]??{nickname:null});
+export const saveNickname=nickname=>request('/rest/v1/member_profiles',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:{user_id:session.user.id,nickname:nickname.trim()}});
+export const setSubmissionStatus=(row,status)=>request('/rest/v1/rpc/set_submission_status',{method:'POST',body:{p_id:row.id,p_status:status,p_expected:row.status}});
