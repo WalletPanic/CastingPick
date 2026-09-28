@@ -64,7 +64,7 @@ export const editPerformance=(id,expected,data)=>request('/rest/v1/rpc/edit_perf
 
 export const deleteProduction=(id,expected)=>request('/rest/v1/rpc/delete_production',{method:'POST',body:{p_id:id,p_expected:expected}});
 
-export const getProfile=()=>request(`/rest/v1/member_profiles?user_id=eq.${session.user.id}&select=nickname`).then(rows=>rows[0]??{nickname:null});
+export const getProfile=async()=>{const allowed=await isAdmin();if(allowed)return {nickname:null,is_admin:true};const rows=await request(`/rest/v1/member_profiles?user_id=eq.${session.user.id}&select=nickname`);return {...(rows[0]??{nickname:null}),is_admin:false};};
 export async function saveNickname(nickname){await requireAvailableNickname(nickname);try{return await request('/rest/v1/member_profiles',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:{user_id:session.user.id,nickname:nickname.trim()}});}catch(error){if(error.code==='23505')throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');throw error;}}
 export const setSubmissionStatus=(row,status)=>request('/rest/v1/rpc/set_submission_status',{method:'POST',body:{p_id:row.id,p_status:status,p_expected:row.status}});
 
