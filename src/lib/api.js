@@ -35,7 +35,7 @@ export async function analyze(file,production){
 }
 export async function uploadSource(file){if(!file)return null;const access=await token();const path=`${session.user.id}/${crypto.randomUUID()}.${file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg'}`;await parse(await fetch(`${url}/storage/v1/object/casting-sources/${path}`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${access}`,'Content-Type':file.type},body:file}));return path;}
 
-export async function signUp(email,password,nickname){const data=await parse(await fetch(`${url}/auth/v1/signup`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password,data:{nickname}})}));if(isExistingSignup(data)){const error=new Error('이미 가입된 계정입니다. 로그인해주세요.');error.code='user_already_exists';throw error;}if(data.access_token)remember(data);return data;}
+export async function signUp(email,password,nickname){await requireAvailableNickname(nickname);let data;try{data=await parse(await fetch(`${url}/auth/v1/signup`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password,data:{nickname:nickname.trim()}})}));}catch(error){if(!['user_already_exists','email_exists'].includes(error.code)){const available=await nicknameAvailable(nickname).catch(()=>true);if(!available)throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');}throw error;}if(isExistingSignup(data)){const error=new Error('이미 가입된 계정입니다. 로그인해주세요.');error.code='user_already_exists';throw error;}if(data.access_token)remember(data);return data;}
 export const getSubmissions=()=>allRows('/rest/v1/submissions_with_members?select=*&order=created_at.desc,id.asc');
 export async function submitSchedule({production_id,title,source_url,files=[]}){
  if(!validSubmissionSource(source_url))throw new Error('올바른 출처 링크를 입력해주세요.');
@@ -65,5 +65,8 @@ export const editPerformance=(id,expected,data)=>request('/rest/v1/rpc/edit_perf
 export const deleteProduction=(id,expected)=>request('/rest/v1/rpc/delete_production',{method:'POST',body:{p_id:id,p_expected:expected}});
 
 export const getProfile=()=>request(`/rest/v1/member_profiles?user_id=eq.${session.user.id}&select=nickname`).then(rows=>rows[0]??{nickname:null});
-export const saveNickname=nickname=>request('/rest/v1/member_profiles',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:{user_id:session.user.id,nickname:nickname.trim()}});
+export async function saveNickname(nickname){await requireAvailableNickname(nickname);try{return await request('/rest/v1/member_profiles',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:{user_id:session.user.id,nickname:nickname.trim()}});}catch(error){if(error.code==='23505')throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');throw error;}}
 export const setSubmissionStatus=(row,status)=>request('/rest/v1/rpc/set_submission_status',{method:'POST',body:{p_id:row.id,p_status:status,p_expected:row.status}});
+
+export const nicknameAvailable=nickname=>request('/rest/v1/rpc/nickname_available',{method:'POST',body:{p_nickname:nickname.trim()}});
+async function requireAvailableNickname(nickname){if(nickname.trim().length<2||nickname.trim().length>20)throw new Error('닉네임은 2~20자로 입력해주세요.');if(!await nicknameAvailable(nickname))throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');}
