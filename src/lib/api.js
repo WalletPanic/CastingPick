@@ -69,4 +69,4 @@ export async function saveNickname(nickname){await requireAvailableNickname(nick
 export const setSubmissionStatus=(row,status)=>request('/rest/v1/rpc/set_submission_status',{method:'POST',body:{p_id:row.id,p_status:status,p_expected:row.status}});
 
 export const nicknameAvailable=nickname=>request('/rest/v1/rpc/nickname_available',{method:'POST',body:{p_nickname:nickname.trim()}});
-async function requireAvailableNickname(nickname){if(nickname.trim().length<2||nickname.trim().length>20)throw new Error('닉네임은 2~20자로 입력해주세요.');if(!await nicknameAvailable(nickname))throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');}
+async function requireAvailableNickname(nickname){if(nickname.trim().length<2||nickname.trim().length>12)throw new Error('닉네임은 2~12자로 입력해주세요.');if(!await nicknameAvailable(nickname))throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');}

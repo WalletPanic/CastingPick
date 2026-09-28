@@ -18,3 +18,5 @@
 .filter-role-settings{border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px}.filter-role-settings legend{font-size:14px;font-weight:600;padding:0 6px}.filter-role-options{display:flex;flex-wrap:wrap;gap:12px 20px}
 
 .submission-card{border-top:1px solid var(--line);padding-top:18px;display:grid;gap:10px}.submission-heading{display:flex;justify-content:space-between;gap:12px;align-items:center}.submission-source{color:var(--plum);font-size:14px;font-weight:600;overflow-wrap:anywhere}.submission-source span{display:block;font-size:12px;font-weight:400;margin-top:4px;text-decoration:underline}
+
+.nickname-input-wrap{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;background:var(--card);padding-right:10px;gap:8px}.nickname-input-wrap input{border:0;background:transparent;flex:1;width:0}.nickname-check{flex-shrink:0;border:0;border-radius:7px;background:var(--lilac);color:var(--plum);font-size:12px;padding:8px 10px;white-space:nowrap}.nickname-input-wrap:focus-within{outline:2px solid var(--plum);outline-offset:2px}.nickname-input-wrap input:focus-visible{outline:0}
