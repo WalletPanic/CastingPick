@@ -6,7 +6,7 @@ import {demoImport} from '../lib/demo';
 import * as api from '../lib/api';
 const labels={new:'신규',duplicate:'중복',changed:'변경'};
 export default function Admin({productions,sessions,demo,user,admin,onLogin,onSaved,onCreate,notify}){
- const [productionId,setProductionId]=useState(productions[0]?.id||'');
+ const [productionId,setProductionId]=useState('');
  const production=productions.find(p=>p.id===productionId);
  const existing=useMemo(()=>sessions.filter(s=>s.production_id===productionId),[sessions,productionId]);
  const [detectedRoles,setDetectedRoles]=useState([]);

@@ -8,7 +8,7 @@ export default function ProductionSearch({productions,value,onChange,disabled}){
  function choose(p){onChange(p.id);setOpen(false);setQuery('');setActive(-1);}
  return <div className="production-search" onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget)){setOpen(false);setQuery('');setActive(-1);}}}>
  <label htmlFor={id}>공연 선택</label>
- <input id={id} role="combobox" aria-autocomplete="list" aria-expanded={open&&!disabled} aria-controls={`${id}-list`} aria-activedescendant={open&&active>=0?`${id}-${active}`:undefined} autoComplete="off" disabled={disabled} placeholder="작품명 또는 공연장 검색" value={open?query:selected?displayName(selected):''} onFocus={()=>{setOpen(true);setQuery('');setActive(-1);}} onChange={e=>{setQuery(e.target.value);setOpen(true);setActive(-1);}} onKeyDown={e=>{
+ <input id={id} role="combobox" aria-autocomplete="list" aria-expanded={open&&!disabled} aria-controls={`${id}-list`} aria-activedescendant={open&&active>=0?`${id}-${active}`:undefined} autoComplete="off" disabled={disabled} placeholder="작품명 검색" value={open?query:selected?displayName(selected):''} onFocus={()=>{setOpen(true);setQuery('');setActive(-1);}} onChange={e=>{setQuery(e.target.value);setOpen(true);setActive(-1);}} onKeyDown={e=>{
  if(e.key==='Escape'){setOpen(false);setQuery('');setActive(-1);}
  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();setOpen(true);setActive(i=>results.length?(e.key==='ArrowDown'?Math.min(i+1,results.length-1):Math.max(i-1,0)):-1);}
  if(e.key==='Enter'&&open){e.preventDefault();if(active>=0&&results[active])choose(results[active]);else if(results.length===1)choose(results[0]);}
