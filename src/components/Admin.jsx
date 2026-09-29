@@ -38,7 +38,7 @@ export default function Admin({productions,sessions,demo,user,admin,onLogin,onSa
  if(!demo&&!admin)return <section className="page"><div className="empty"><Icon name="user" size={28}/><h2>관리자 권한이 필요해요</h2><p>현재 계정은 공연을 등록할 수 없습니다.</p></div></section>;
  return <section className="page admin-page"><div className="page-title"><div><div className="eyebrow">CASTING STUDIO</div><h1>캐스팅표 등록</h1></div><span className="pill">{demo?'데모 관리자':'관리자'}</span></div><p className="intro-copy">새로운 시간표를, 새로운 관극으로.<br/>원본과 비교하고 확인한 회차만 저장하세요.</p>
  {!creating&&<div className="stepper"><span className={!rows&&!saved?'current':''}>01 등록</span><span className={rows?'current':''}>02 검수</span><span className={saved?'current':''}>03 완료</span></div>}
- <div className="admin-toolbar"><ProductionSearch productions={productions} value={creating?'':productionId} disabled={busy} onChange={changeProduction}/><button className="secondary" disabled={busy} onClick={()=>{setCreating(!creating);setError('')}}><Icon name="plus" size={16}/>{creating?'캐스팅표 등록으로 돌아가기':'공연 추가'}</button></div>
+ <div className="admin-toolbar production-picker-toolbar"><ProductionSearch productions={productions} value={creating?'':productionId} disabled={busy} onChange={changeProduction}/><button className="secondary" disabled={busy} onClick={()=>{setCreating(!creating);setError('')}}><Icon name="plus" size={16}/>{creating?'캐스팅표 등록으로 돌아가기':'공연 추가'}</button></div>
 
  {creating&&<ProductionForm onCreate={async value=>{const p=await onCreate(value);setCreating(false);changeProduction(p.id);notify('공연이 등록되어 사이트에 게시됐어요.');location.hash=`/show/${p.id}`}}/>}
  {!creating&&<>
