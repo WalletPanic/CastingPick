@@ -57,3 +57,11 @@ export function extractedRoles(input,production){
 
 export function productionStatus(production,today){return production.start_date>today?'upcoming':production.end_date<today?'ended':'running';}
 export function koreaToday(now=new Date()){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
+
+export function orderedCast(cast,production){
+ const roles=production?.roles??[];
+ const visible=(production?.filter_roles??roles).filter(role=>roles.includes(role));
+ const order=[...new Set([...visible,...roles])];
+ const rank=role=>{const i=order.indexOf(role);return i<0?order.length:i;};
+ return [...cast].sort((a,b)=>rank(a.role)-rank(b.role));
+}
