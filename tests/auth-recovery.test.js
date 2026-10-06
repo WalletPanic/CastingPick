@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+let calls=[];
+global.window={location:{hash:'#access_token=recovery-test&type=recovery',origin:'https://casting-pick.vercel.app',pathname:'/',search:''},history:{replaceState:(_a,_b,path)=>calls.push(path)},dispatchEvent:()=>{}};
+global.fetch=async(url,opts)=>{calls.push({url,...opts});return {ok:true,text:async()=>JSON.stringify({id:'test'})}};
+let src=readFileSync(new URL('../src/lib/api.js',import.meta.url),'utf8').replace(/^import .*;$/gm,'').replaceAll('import.meta.env.VITE_SUPABASE_URL',"'https://example.supabase.co'").replaceAll('import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY',"'public-test'");
+src='const readLocal=()=>null,writeLocal=()=>{};\n'+src;
+const api=await import('data:text/javascript;base64,'+Buffer.from(src).toString('base64'));
+assert.equal(calls[0],'/#/reset-password');assert.equal(api.hasRecoveryToken(),true);assert.equal(api.getSession(),null);
+await api.sendAccountEmail('member@example.com','recovery');assert.match(calls.at(-1).url,/\/recover\?redirect_to=/);
+await api.sendAccountEmail('member@example.com','signup');assert.equal(JSON.parse(calls.at(-1).body).type,'signup');
+await assert.rejects(api.resetPassword('short'));
+await api.resetPassword('new-password-123');assert.equal(calls.at(-1).headers.Authorization,'Bearer recovery-test');assert.equal(calls.at(-1).method,'PUT');assert.equal(api.hasRecoveryToken(),false);await assert.rejects(api.resetPassword('new-password-123'));
+console.log('Recovery callback, isolated token, email endpoints, password update and token cleanup: PASS');

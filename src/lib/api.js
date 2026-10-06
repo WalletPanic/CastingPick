@@ -70,3 +70,27 @@ export const setSubmissionStatus=(row,status)=>request('/rest/v1/rpc/set_submiss
 
 export const nicknameAvailable=nickname=>request('/rest/v1/rpc/nickname_available',{method:'POST',body:{p_nickname:nickname.trim()}});
 async function requireAvailableNickname(nickname){if(nickname.trim().length<2||nickname.trim().length>12)throw new Error('닉네임은 2~12자로 입력해주세요.');if(!await nicknameAvailable(nickname))throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');}
+
+// Recovery credentials stay in memory and never replace an existing user's session.
+let recoveryToken=null;
+export let emailLinkMessage='';
+const emailCallback=new URLSearchParams(window.location.hash.slice(1));
+if(emailCallback.has('access_token')||emailCallback.has('error_description')){
+ const recovery=emailCallback.get('type')==='recovery';
+ if(recovery)recoveryToken=emailCallback.get('access_token');
+ emailLinkMessage=emailCallback.has('error_description')?'메일 링크가 만료되었거나 유효하지 않습니다. 메일을 다시 요청해주세요.':recovery?'':'이메일 인증이 완료되었습니다. 로그인해주세요.';
+ window.history.replaceState(null,'',window.location.pathname+window.location.search+(recovery?'#/reset-password':'#/login'));
+}
+export const hasRecoveryToken=()=>Boolean(recoveryToken);
+export async function sendAccountEmail(email,type){
+ const endpoint=type==='recovery'?'recover':'resend';
+ const redirect=window.location.origin+'/';
+ return parse(await fetch(`${url}/auth/v1/${endpoint}?redirect_to=${encodeURIComponent(redirect)}`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,...(type==='signup'?{type:'signup'}:{})})}));
+}
+export async function resetPassword(password){
+ if(!recoveryToken)throw new Error('재설정 링크를 다시 요청해주세요.');
+ if(password.length<8)throw new Error('비밀번호는 8자 이상 입력해주세요.');
+ await parse(await fetch(`${url}/auth/v1/user`,{method:'PUT',headers:{apikey:key,Authorization:`Bearer ${recoveryToken}`,'Content-Type':'application/json'},body:JSON.stringify({password})}));
+ recoveryToken=null;
+ remember(null);
+}
