@@ -1,3 +1,4 @@
+import ProductionDate from './ProductionDate';
 import {useEffect,useMemo,useState} from 'react';
 import Icon from './Icon';
 import ProductionSearch from './ProductionSearch';
@@ -70,5 +71,5 @@ function ProductionForm({onCreate}){
    uploaded=await api.uploadPoster(poster);
    await onCreate({title,venue,start_date:form.get('start_date'),end_date:form.get('end_date'),roles,subtitle:'',motif:'moon',poster_url:uploaded.url});
   }catch(e){if(uploaded)await api.removePoster(uploaded.path).catch(()=>{});setError(e.message);}finally{setBusy(false)}
- }}><h2>신규 공연 추가</h2><p className="helper">등록하면 공연 목록에 바로 표시됩니다. 캐스팅 시간표는 이후에 추가할 수 있어요.</p><label>작품명<input name="title" required maxLength={120} disabled={busy}/></label><label>공연장<input name="venue" required maxLength={120} disabled={busy}/></label><div className="two-columns"><label>공연 시작일<input type="date" name="start_date" required disabled={busy}/></label><label>공연 종료일<input type="date" name="end_date" required disabled={busy}/></label></div><label>포스터<input type="file" accept="image/png,image/jpeg,image/webp" required disabled={busy} onChange={e=>setPoster(e.target.files[0]||null)}/></label>{preview&&<img className="source-preview" src={preview} alt="등록할 공연 포스터 미리보기"/>}{error&&<p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy?'등록 중…':'공연 등록 · 사이트에 게시'}</button></form>
+ }}><h2>신규 공연 추가</h2><p className="helper">등록하면 공연 목록에 바로 표시됩니다. 캐스팅 시간표는 이후에 추가할 수 있어요.</p><label>작품명<input name="title" required maxLength={120} disabled={busy}/></label><label>공연장<input name="venue" required maxLength={120} disabled={busy}/></label><div className="two-columns"><label>공연 시작일<ProductionDate name="start_date" required disabled={busy}/></label><label>공연 종료일<ProductionDate name="end_date" required disabled={busy}/></label></div><label>포스터<input type="file" accept="image/png,image/jpeg,image/webp" required disabled={busy} onChange={e=>setPoster(e.target.files[0]||null)}/></label>{preview&&<img className="source-preview" src={preview} alt="등록할 공연 포스터 미리보기"/>}{error&&<p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy?'등록 중…':'공연 등록 · 사이트에 게시'}</button></form>
 }

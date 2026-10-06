@@ -54,3 +54,6 @@ export function extractedRoles(input,production){
  if(!Array.isArray(input.performances)||input.performances.some(row=>!Array.isArray(row.cast)||row.cast.length!==clean.length||clean.some(role=>row.cast.filter(c=>c.role===role).length!==1)))throw new Error('회차별 배역을 정확히 읽지 못했어요. 다른 사진으로 다시 분석해주세요.');
  return production.roles.length?production.roles:clean;
 }
+
+export function productionStatus(production,today){return production.start_date>today?'upcoming':production.end_date<today?'ended':'running';}
+export function koreaToday(now=new Date()){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
