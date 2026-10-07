@@ -38,3 +38,6 @@
 /* Public posters receive interactions through their production links. */
 .production-card .poster-image,.detail-poster-link .detail-poster{pointer-events:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;-webkit-touch-callout:none}
 .detail-poster-link{display:block;flex-shrink:0}
+
+/* Keep desktop navigation visible without covering sticky page panels. */
+@media(min-width:761px){.site-header{position:sticky;top:0;z-index:60;background:var(--paper)}.filter-panel{top:104px;max-height:calc(100dvh - 120px)}.review-original{top:112px}}
