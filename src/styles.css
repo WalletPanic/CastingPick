@@ -34,3 +34,7 @@
 .site-footer{flex-direction:column;align-items:stretch;gap:18px}.footer-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}.footer-contacts{display:flex;flex-wrap:wrap;gap:8px 24px}.footer-contacts a{display:inline-flex;align-items:center;gap:8px;min-height:32px}.footer-contacts a span{color:var(--ink)}.footer-contacts a:hover span{text-decoration:underline}@media(max-width:540px){.footer-heading{flex-wrap:wrap}.footer-contacts{flex-direction:column;gap:0}.footer-contacts a{min-height:44px}}
 
 .footer-contacts svg{color:var(--plum)}
+
+/* Public posters receive interactions through their production links. */
+.production-card .poster-image,.detail-poster-link .detail-poster{pointer-events:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;-webkit-touch-callout:none}
+.detail-poster-link{display:block;flex-shrink:0}
