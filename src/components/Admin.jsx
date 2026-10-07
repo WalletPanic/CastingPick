@@ -1,3 +1,4 @@
+import PosterVariants,{initialPosters,uploadPosters} from './PosterVariants';
 import ProductionDate from './ProductionDate';
 import {useEffect,useMemo,useState} from 'react';
 import Icon from './Icon';
@@ -57,19 +58,17 @@ export default function Admin({productions,sessions,demo,user,admin,onLogin,onSa
  </section>
 }
 function ProductionForm({onCreate}){
- const [error,setError]=useState(''),[busy,setBusy]=useState(false),[poster,setPoster]=useState(null),[preview,setPreview]=useState('');
- useEffect(()=>{if(!poster){setPreview('');return;}const url=URL.createObjectURL(poster);setPreview(url);return()=>URL.revokeObjectURL(url)},[poster]);
+ const [error,setError]=useState(''),[busy,setBusy]=useState(false),[posters,setPosters]=useState(()=>initialPosters());
  return <form className="panel form-stack" onSubmit={async e=>{
   e.preventDefault();setError('');const form=new FormData(e.currentTarget);
   const title=String(form.get('title')).trim(),venue=String(form.get('venue')).trim();
   if(!title||!venue){setError('작품명과 공연장을 입력해주세요.');return;}
   if(form.get('start_date')>form.get('end_date')){setError('종료일은 시작일 이후여야 해요.');return;}
-  if(!poster||!['image/png','image/jpeg','image/webp'].includes(poster.type)||poster.size>8*1024*1024){setError('포스터는 JPG·PNG·WEBP 형식으로 8MB 이하로 올려주세요.');return;}
   const roles=[];
-  setBusy(true);let uploaded;
+  setBusy(true);const uploads=[];
   try{
-   uploaded=await api.uploadPoster(poster);
-   await onCreate({title,venue,start_date:form.get('start_date'),end_date:form.get('end_date'),roles,subtitle:'',motif:'moon',poster_url:uploaded.url});
-  }catch(e){if(uploaded)await api.removePoster(uploaded.path).catch(()=>{});setError(e.message);}finally{setBusy(false)}
- }}><h2>신규 공연 추가</h2><p className="helper">등록하면 공연 목록에 바로 표시됩니다. 캐스팅 시간표는 이후에 추가할 수 있어요.</p><label>작품명<input name="title" required maxLength={120} disabled={busy}/></label><label>공연장<input name="venue" required maxLength={120} disabled={busy}/></label><div className="two-columns"><label>공연 시작일<ProductionDate name="start_date" required disabled={busy}/></label><label>공연 종료일<ProductionDate name="end_date" required disabled={busy}/></label></div><label>포스터<input type="file" accept="image/png,image/jpeg,image/webp" required disabled={busy} onChange={e=>setPoster(e.target.files[0]||null)}/></label>{preview&&<img className="source-preview" src={preview} alt="등록할 공연 포스터 미리보기"/>}{error&&<p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy?'등록 중…':'공연 등록 · 사이트에 게시'}</button></form>
+   const posterData=await uploadPosters(posters,uploads);
+   await onCreate({title,venue,start_date:form.get('start_date'),end_date:form.get('end_date'),roles,subtitle:'',motif:'moon',...posterData});
+  }catch(e){await Promise.all(uploads.map(upload=>api.removePoster(upload.path).catch(()=>{})));setError(e.message);}finally{setBusy(false)}
+ }}><h2>신규 공연 추가</h2><p className="helper">등록하면 공연 목록에 바로 표시됩니다. 캐스팅 시간표는 이후에 추가할 수 있어요.</p><label>작품명<input name="title" required maxLength={120} disabled={busy}/></label><label>공연장<input name="venue" required maxLength={120} disabled={busy}/></label><div className="two-columns"><label>공연 시작일<ProductionDate name="start_date" required disabled={busy}/></label><label>공연 종료일<ProductionDate name="end_date" required disabled={busy}/></label></div><PosterVariants value={posters} onChange={setPosters} disabled={busy}/>{error&&<p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy?'등록 중…':'공연 등록 · 사이트에 게시'}</button></form>
 }
