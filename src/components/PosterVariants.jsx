@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import * as api from '../lib/api';
-export function initialPosters(p={}){return {original:p.poster_original_url??p.poster_url??'',illustrated:p.poster_illustrated_url??'',active:p.poster_variant??'original',files:{}}}
+export function initialPosters(p={}){return {original:p.poster_original_url??(p.poster_variant==='illustrated'?'':p.poster_url??''),illustrated:p.poster_illustrated_url??'',active:p.poster_variant??'original',files:{}}}
 export async function uploadPosters(value,uploads){
  const urls={original:value.original,illustrated:value.illustrated};
  for(const kind of ['original','illustrated'])if(value.files[kind]){const f=value.files[kind];if(!['image/png','image/jpeg','image/webp'].includes(f.type)||f.size>8*1024*1024)throw new Error('포스터는 JPG·PNG·WEBP, 8MB 이하로 올려주세요.');}

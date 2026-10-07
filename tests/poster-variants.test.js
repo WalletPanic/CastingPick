@@ -18,3 +18,5 @@ test('both uploads are preserved and only the selected image becomes public post
  const state=initialPosters();state.active='illustrated';state.files={original:{name:'original',type:'image/png',size:100},illustrated:{name:'drawing',type:'image/png',size:100}};
  const uploads=[];const data=await uploadPosters(state,uploads);assert.equal(uploads.length,2);assert.equal(data.poster_original_url,'https://test/original');assert.equal(data.poster_url,'https://test/drawing');
 });
+
+test('illustrated-only production keeps original slot empty',()=>{assert.equal(initialPosters({poster_variant:'illustrated',poster_url:'drawing',poster_original_url:null,poster_illustrated_url:'drawing'}).original,'')});
