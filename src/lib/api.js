@@ -1,96 +1,360 @@
-import {validSubmissionSource} from './submissions.js';
-import {isExistingSignup} from './auth.js';
-import {readLocal,writeLocal} from './storage';
-const url=import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/,'');
-const key=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-export const configured=Boolean(url&&key);
-export const incompleteConfig=Boolean(url)!==Boolean(key);
-const sessionKey='castingpick.auth.v1';
-let session=readLocal(sessionKey,null), refreshing=null;
-export const getSession=()=>session;
-function remember(data){session=data?{...data,expires_at:Math.floor(Date.now()/1000)+data.expires_in}:null;writeLocal(sessionKey,session);window.dispatchEvent(new Event('castingpick-auth'));}
-async function parse(response){const text=await response.text();let data;try{data=text?JSON.parse(text):null;}catch{throw new Error('서버 응답을 읽지 못했습니다.');}if(!response.ok){const error=new Error(data?.error_description||data?.message||data?.msg||data?.error||`요청 실패 (${response.status})`);error.code=data?.error_code||data?.code;throw error;}return data;}
-async function token(){
- if(session&&session.expires_at<Date.now()/1000+60){
-  if(!refreshing)refreshing=fetch(`${url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:session.refresh_token})}).then(parse).then(remember).catch(e=>{remember(null);throw e;}).finally(()=>refreshing=null);
-  await refreshing;
- }
- return session?.access_token;
+import { validSubmissionSource } from './submissions.js';
+import { isExistingSignup } from './auth.js';
+import { readLocal, writeLocal } from './storage';
+const url = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, '');
+const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+export const configured = Boolean(url && key);
+export const incompleteConfig = Boolean(url) !== Boolean(key);
+const sessionKey = 'castingpick.auth.v1';
+let session = readLocal(sessionKey, null),
+  refreshing = null;
+export const getSession = () => session;
+function remember(data) {
+  session = data ? { ...data, expires_at: Math.floor(Date.now() / 1000) + data.expires_in } : null;
+  writeLocal(sessionKey, session);
+  window.dispatchEvent(new Event('castingpick-auth'));
 }
-export async function request(path,{method='GET',body,headers={}}={}){const access=await token();return parse(await fetch(url+path,{method,headers:{apikey:key,...(access?{Authorization:`Bearer ${access}`} : {}),'Content-Type':'application/json',...headers},...(body!==undefined?{body:JSON.stringify(body)}:{})}));}
-export async function signIn(email,password){const data=await parse(await fetch(`${url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password})}));remember(data);}
-export async function signOut(){try{await request('/auth/v1/logout',{method:'POST'});}finally{remember(null);}}
-export const isAdmin=()=>request('/rest/v1/rpc/is_admin',{method:'POST',body:{}});
-export const getProductions=()=>allRows('/rest/v1/productions?select=*&order=start_date.asc,id.asc').then(rows=>rows.map(p=>({...p,roles:Array.isArray(p.roles)?p.roles:[],filter_roles:Array.isArray(p.filter_roles)?p.filter_roles:null})));
-async function allRows(path){let result=[];for(let offset=0;;offset+=500){const rows=await request(`${path}&limit=500&offset=${offset}`);result.push(...rows);if(rows.length<500)return result;}}
-export const getPerformances=()=>allRows('/rest/v1/performances?select=*&order=starts_at.asc,id.asc');
-export const getFavorites=()=>allRows('/rest/v1/favorites?select=performance_id&order=performance_id.asc').then(rows=>rows.map(r=>r.performance_id));
-export const saveFavorite=(id,selected)=>request(`/rest/v1/favorites${selected?'':`?performance_id=eq.${id}`}`,{method:selected?'POST':'DELETE',...(selected?{body:{user_id:session.user.id,performance_id:id},headers:{Prefer:'resolution=ignore-duplicates'}}:{})});
-export const addProduction=data=>request('/rest/v1/productions',{method:'POST',body:data,headers:{Prefer:'return=representation'}}).then(rows=>rows[0]);
-export const commitImport=body=>request('/rest/v1/rpc/commit_import_with_roles',{method:'POST',body});
-export async function analyze(file,production){
- const access=await token();if(!access)throw new Error('관리자 로그인이 필요해요.');
- const body=new FormData();body.append('image',file);body.append('production_id',production.id);
- return parse(await fetch(`${url}/functions/v1/analyze-schedule`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${access}`},body}));
-}
-export async function uploadSource(file){if(!file)return null;const access=await token();const path=`${session.user.id}/${crypto.randomUUID()}.${file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg'}`;await parse(await fetch(`${url}/storage/v1/object/casting-sources/${path}`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${access}`,'Content-Type':file.type},body:file}));return path;}
-
-export async function signUp(email,password,nickname){await requireAvailableNickname(nickname);let data;try{data=await parse(await fetch(`${url}/auth/v1/signup`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,password,data:{nickname:nickname.trim()}})}));}catch(error){if(!['user_already_exists','email_exists'].includes(error.code)){const available=await nicknameAvailable(nickname).catch(()=>true);if(!available)throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');}throw error;}if(isExistingSignup(data)){const error=new Error('이미 가입된 계정입니다. 로그인해주세요.');error.code='user_already_exists';throw error;}if(data.access_token)remember(data);return data;}
-export const getSubmissions=()=>allRows('/rest/v1/submissions_with_members?select=*&order=created_at.desc,id.asc');
-export async function submitSchedule({production_id,title,source_url,files=[]}){
- if(!validSubmissionSource(source_url))throw new Error('올바른 출처 링크를 입력해주세요.');
- const access=await token();if(!access)throw new Error('로그인이 필요합니다.');
- const id=crypto.randomUUID(),paths=[];
- try{
-  for(const file of files){const path=`${session.user.id}/${id}/${crypto.randomUUID()}.${file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg'}`;
-   await parse(await fetch(`${url}/storage/v1/object/schedule-submissions/${path}`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${access}`,'Content-Type':file.type},body:file}));paths.push(path);
+async function parse(response) {
+  const text = await response.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    throw new Error('서버 응답을 읽지 못했습니다.');
   }
-  return await request('/rest/v1/schedule_submissions',{method:'POST',headers:{Prefer:'return=representation'},body:{id,submitted_by:session.user.id,production_id:production_id||null,title,source_url:source_url||null,image_paths:paths}});
- }catch(error){if(paths.length)await request('/storage/v1/object/schedule-submissions',{method:'DELETE',body:{prefixes:paths}}).catch(()=>{});throw error;}
+  if (!response.ok) {
+    const error = new Error(
+      data?.error_description ||
+        data?.message ||
+        data?.msg ||
+        data?.error ||
+        `요청 실패 (${response.status})`,
+    );
+    error.code = data?.error_code || data?.code;
+    throw error;
+  }
+  return data;
 }
-export async function submissionImage(path){const access=await token();const res=await fetch(`${url}/storage/v1/object/authenticated/schedule-submissions/${path}`,{headers:{apikey:key,Authorization:`Bearer ${access}`}});if(!res.ok)throw new Error('원본을 불러오지 못했습니다.');return res.blob();}
-
-export async function uploadPoster(file){
- const access=await token();if(!access)throw new Error('관리자 로그인이 필요합니다.');
- const path=`${session.user.id}/${crypto.randomUUID()}.${file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg'}`;
- const response=await fetch(`${url}/storage/v1/object/production-posters/${path}`,{method:'POST',headers:{apikey:key,Authorization:`Bearer ${access}`,'Content-Type':file.type},body:file});
- if(!response.ok){const detail=await response.text();if(detail.includes('Bucket not found'))throw new Error('공연 포스터 저장소 설정이 필요합니다. 관리자용 DB 설정 SQL을 실행해주세요.');throw new Error('포스터를 저장하지 못했습니다. 관리자 권한과 저장소 설정을 확인해주세요.');}
- return {path,url:`${url}/storage/v1/object/public/production-posters/${path}`};
+async function token() {
+  if (session && session.expires_at < Date.now() / 1000 + 60) {
+    if (!refreshing)
+      refreshing = fetch(`${url}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { apikey: key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: session.refresh_token }),
+      })
+        .then(parse)
+        .then(remember)
+        .catch((e) => {
+          remember(null);
+          throw e;
+        })
+        .finally(() => (refreshing = null));
+    await refreshing;
+  }
+  return session?.access_token;
 }
-export const removePoster=path=>request('/storage/v1/object/production-posters',{method:'DELETE',body:{prefixes:[path]}});
+export async function request(path, { method = 'GET', body, headers = {} } = {}) {
+  const access = await token();
+  return parse(
+    await fetch(url + path, {
+      method,
+      headers: {
+        apikey: key,
+        ...(access ? { Authorization: `Bearer ${access}` } : {}),
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    }),
+  );
+}
+export async function signIn(email, password) {
+  const data = await parse(
+    await fetch(`${url}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: { apikey: key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    }),
+  );
+  remember(data);
+}
+export async function signOut() {
+  try {
+    await request('/auth/v1/logout', { method: 'POST' });
+  } finally {
+    remember(null);
+  }
+}
+export const isAdmin = () => request('/rest/v1/rpc/is_admin', { method: 'POST', body: {} });
+export const getProductions = () =>
+  allRows('/rest/v1/productions?select=*&order=start_date.asc,id.asc').then((rows) =>
+    rows.map((p) => ({
+      ...p,
+      roles: Array.isArray(p.roles) ? p.roles : [],
+      filter_roles: Array.isArray(p.filter_roles) ? p.filter_roles : null,
+    })),
+  );
+async function allRows(path) {
+  let result = [];
+  for (let offset = 0; ; offset += 500) {
+    const rows = await request(`${path}&limit=500&offset=${offset}`);
+    result.push(...rows);
+    if (rows.length < 500) return result;
+  }
+}
+export const getPerformances = () =>
+  allRows('/rest/v1/performances?select=*&order=starts_at.asc,id.asc');
+export const getFavorites = () =>
+  allRows('/rest/v1/favorites?select=performance_id&order=performance_id.asc').then((rows) =>
+    rows.map((r) => r.performance_id),
+  );
+export const saveFavorite = (id, selected) =>
+  request(`/rest/v1/favorites${selected ? '' : `?performance_id=eq.${id}`}`, {
+    method: selected ? 'POST' : 'DELETE',
+    ...(selected
+      ? {
+          body: { user_id: session.user.id, performance_id: id },
+          headers: { Prefer: 'resolution=ignore-duplicates' },
+        }
+      : {}),
+  });
+export const addProduction = (data) =>
+  request('/rest/v1/productions', {
+    method: 'POST',
+    body: data,
+    headers: { Prefer: 'return=representation' },
+  }).then((rows) => rows[0]);
+export const commitImport = (body) =>
+  request('/rest/v1/rpc/commit_import_with_roles', { method: 'POST', body });
+export async function analyze(file, production) {
+  const access = await token();
+  if (!access) throw new Error('관리자 로그인이 필요해요.');
+  const body = new FormData();
+  body.append('image', file);
+  body.append('production_id', production.id);
+  return parse(
+    await fetch(`${url}/functions/v1/analyze-schedule`, {
+      method: 'POST',
+      headers: { apikey: key, Authorization: `Bearer ${access}` },
+      body,
+    }),
+  );
+}
+export async function uploadSource(file) {
+  if (!file) return null;
+  const access = await token();
+  const path = `${session.user.id}/${crypto.randomUUID()}.${file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'}`;
+  await parse(
+    await fetch(`${url}/storage/v1/object/casting-sources/${path}`, {
+      method: 'POST',
+      headers: { apikey: key, Authorization: `Bearer ${access}`, 'Content-Type': file.type },
+      body: file,
+    }),
+  );
+  return path;
+}
 
-export const editProduction=(id,expected,data)=>request('/rest/v1/rpc/edit_production',{method:'POST',body:{p_id:id,p_expected:expected,p_data:data}});
-export const editPerformance=(id,expected,data)=>request('/rest/v1/rpc/edit_performance',{method:'POST',body:{p_id:id,p_expected:expected,p_data:data}});
+export async function signUp(email, password, nickname) {
+  await requireAvailableNickname(nickname);
+  let data;
+  try {
+    data = await parse(
+      await fetch(`${url}/auth/v1/signup`, {
+        method: 'POST',
+        headers: { apikey: key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, data: { nickname: nickname.trim() } }),
+      }),
+    );
+  } catch (error) {
+    if (!['user_already_exists', 'email_exists'].includes(error.code)) {
+      const available = await nicknameAvailable(nickname).catch(() => true);
+      if (!available) throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
+    }
+    throw error;
+  }
+  if (isExistingSignup(data)) {
+    const error = new Error('이미 가입된 계정입니다. 로그인해주세요.');
+    error.code = 'user_already_exists';
+    throw error;
+  }
+  if (data.access_token) remember(data);
+  return data;
+}
+export const getSubmissions = () =>
+  allRows('/rest/v1/submissions_with_members?select=*&order=created_at.desc,id.asc');
+export async function submitSchedule({ production_id, title, source_url, files = [] }) {
+  if (!validSubmissionSource(source_url)) throw new Error('올바른 출처 링크를 입력해주세요.');
+  const access = await token();
+  if (!access) throw new Error('로그인이 필요합니다.');
+  const id = crypto.randomUUID(),
+    paths = [];
+  try {
+    for (const file of files) {
+      const path = `${session.user.id}/${id}/${crypto.randomUUID()}.${file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'}`;
+      await parse(
+        await fetch(`${url}/storage/v1/object/schedule-submissions/${path}`, {
+          method: 'POST',
+          headers: { apikey: key, Authorization: `Bearer ${access}`, 'Content-Type': file.type },
+          body: file,
+        }),
+      );
+      paths.push(path);
+    }
+    return await request('/rest/v1/schedule_submissions', {
+      method: 'POST',
+      headers: { Prefer: 'return=representation' },
+      body: {
+        id,
+        submitted_by: session.user.id,
+        production_id: production_id || null,
+        title,
+        source_url: source_url || null,
+        image_paths: paths,
+      },
+    });
+  } catch (error) {
+    if (paths.length)
+      await request('/storage/v1/object/schedule-submissions', {
+        method: 'DELETE',
+        body: { prefixes: paths },
+      }).catch(() => {});
+    throw error;
+  }
+}
+export async function submissionImage(path) {
+  const access = await token();
+  const res = await fetch(`${url}/storage/v1/object/authenticated/schedule-submissions/${path}`, {
+    headers: { apikey: key, Authorization: `Bearer ${access}` },
+  });
+  if (!res.ok) throw new Error('원본을 불러오지 못했습니다.');
+  return res.blob();
+}
 
-export const deleteProduction=(id,expected)=>request('/rest/v1/rpc/delete_production',{method:'POST',body:{p_id:id,p_expected:expected}});
+export async function uploadPoster(file) {
+  const access = await token();
+  if (!access) throw new Error('관리자 로그인이 필요합니다.');
+  const path = `${session.user.id}/${crypto.randomUUID()}.${file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'}`;
+  const response = await fetch(`${url}/storage/v1/object/production-posters/${path}`, {
+    method: 'POST',
+    headers: { apikey: key, Authorization: `Bearer ${access}`, 'Content-Type': file.type },
+    body: file,
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    if (detail.includes('Bucket not found'))
+      throw new Error('공연 포스터 저장소 설정이 필요합니다. 관리자용 DB 설정 SQL을 실행해주세요.');
+    throw new Error('포스터를 저장하지 못했습니다. 관리자 권한과 저장소 설정을 확인해주세요.');
+  }
+  return { path, url: `${url}/storage/v1/object/public/production-posters/${path}` };
+}
+export const removePoster = (path) =>
+  request('/storage/v1/object/production-posters', {
+    method: 'DELETE',
+    body: { prefixes: [path] },
+  });
 
-export const getProfile=async()=>{const allowed=await isAdmin();if(allowed)return {nickname:null,is_admin:true};const rows=await request(`/rest/v1/member_profiles?user_id=eq.${session.user.id}&select=nickname`);return {...(rows[0]??{nickname:null}),is_admin:false};};
-export async function saveNickname(nickname){await requireAvailableNickname(nickname);try{return await request('/rest/v1/member_profiles',{method:'POST',headers:{Prefer:'resolution=merge-duplicates'},body:{user_id:session.user.id,nickname:nickname.trim()}});}catch(error){if(error.code==='23505')throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');throw error;}}
-export const setSubmissionStatus=(row,status)=>request('/rest/v1/rpc/set_submission_status',{method:'POST',body:{p_id:row.id,p_status:status,p_expected:row.status}});
+export const editProduction = (id, expected, data) =>
+  request('/rest/v1/rpc/edit_production', {
+    method: 'POST',
+    body: { p_id: id, p_expected: expected, p_data: data },
+  });
+export const editPerformance = (id, expected, data) =>
+  request('/rest/v1/rpc/edit_performance', {
+    method: 'POST',
+    body: { p_id: id, p_expected: expected, p_data: data },
+  });
 
-export const nicknameAvailable=nickname=>request('/rest/v1/rpc/nickname_available',{method:'POST',body:{p_nickname:nickname.trim()}});
-async function requireAvailableNickname(nickname){if(nickname.trim().length<2||nickname.trim().length>12)throw new Error('닉네임은 2~12자로 입력해주세요.');if(!await nicknameAvailable(nickname))throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');}
+export const deleteProduction = (id, expected) =>
+  request('/rest/v1/rpc/delete_production', {
+    method: 'POST',
+    body: { p_id: id, p_expected: expected },
+  });
+
+export const getProfile = async () => {
+  const allowed = await isAdmin();
+  if (allowed) return { nickname: null, is_admin: true };
+  const rows = await request(
+    `/rest/v1/member_profiles?user_id=eq.${session.user.id}&select=nickname`,
+  );
+  return { ...(rows[0] ?? { nickname: null }), is_admin: false };
+};
+export async function saveNickname(nickname) {
+  await requireAvailableNickname(nickname);
+  try {
+    return await request('/rest/v1/member_profiles', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates' },
+      body: { user_id: session.user.id, nickname: nickname.trim() },
+    });
+  } catch (error) {
+    if (error.code === '23505')
+      throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
+    throw error;
+  }
+}
+export const setSubmissionStatus = (row, status) =>
+  request('/rest/v1/rpc/set_submission_status', {
+    method: 'POST',
+    body: { p_id: row.id, p_status: status, p_expected: row.status },
+  });
+
+export const nicknameAvailable = (nickname) =>
+  request('/rest/v1/rpc/nickname_available', {
+    method: 'POST',
+    body: { p_nickname: nickname.trim() },
+  });
+async function requireAvailableNickname(nickname) {
+  if (nickname.trim().length < 2 || nickname.trim().length > 12)
+    throw new Error('닉네임은 2~12자로 입력해주세요.');
+  if (!(await nicknameAvailable(nickname)))
+    throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');
+}
 
 // Recovery credentials stay in memory and never replace an existing user's session.
-let recoveryToken=null;
-export let emailLinkMessage='';
-const emailCallback=new URLSearchParams(window.location.hash.slice(1));
-if(emailCallback.has('access_token')||emailCallback.has('error_description')){
- const recovery=emailCallback.get('type')==='recovery';
- if(recovery)recoveryToken=emailCallback.get('access_token');
- emailLinkMessage=emailCallback.has('error_description')?'메일 링크가 만료되었거나 유효하지 않습니다. 메일을 다시 요청해주세요.':recovery?'':'이메일 인증이 완료되었습니다. 로그인해주세요.';
- window.history.replaceState(null,'',window.location.pathname+window.location.search+(recovery?'#/reset-password':'#/login'));
+let recoveryToken = null;
+export let emailLinkMessage = '';
+const emailCallback = new URLSearchParams(window.location.hash.slice(1));
+if (emailCallback.has('access_token') || emailCallback.has('error_description')) {
+  const recovery = emailCallback.get('type') === 'recovery';
+  if (recovery) recoveryToken = emailCallback.get('access_token');
+  emailLinkMessage = emailCallback.has('error_description')
+    ? '메일 링크가 만료되었거나 유효하지 않습니다. 메일을 다시 요청해주세요.'
+    : recovery
+      ? ''
+      : '이메일 인증이 완료되었습니다. 로그인해주세요.';
+  window.history.replaceState(
+    null,
+    '',
+    window.location.pathname + window.location.search + (recovery ? '#/reset-password' : '#/login'),
+  );
 }
-export const hasRecoveryToken=()=>Boolean(recoveryToken);
-export async function sendAccountEmail(email,type){
- const endpoint=type==='recovery'?'recover':'resend';
- const redirect=window.location.origin+'/';
- return parse(await fetch(`${url}/auth/v1/${endpoint}?redirect_to=${encodeURIComponent(redirect)}`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email,...(type==='signup'?{type:'signup'}:{})})}));
+export const hasRecoveryToken = () => Boolean(recoveryToken);
+export async function sendAccountEmail(email, type) {
+  const endpoint = type === 'recovery' ? 'recover' : 'resend';
+  const redirect = window.location.origin + '/';
+  return parse(
+    await fetch(`${url}/auth/v1/${endpoint}?redirect_to=${encodeURIComponent(redirect)}`, {
+      method: 'POST',
+      headers: { apikey: key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, ...(type === 'signup' ? { type: 'signup' } : {}) }),
+    }),
+  );
 }
-export async function resetPassword(password){
- if(!recoveryToken)throw new Error('재설정 링크를 다시 요청해주세요.');
- if(password.length<8)throw new Error('비밀번호는 8자 이상 입력해주세요.');
- await parse(await fetch(`${url}/auth/v1/user`,{method:'PUT',headers:{apikey:key,Authorization:`Bearer ${recoveryToken}`,'Content-Type':'application/json'},body:JSON.stringify({password})}));
- recoveryToken=null;
- remember(null);
+export async function resetPassword(password) {
+  if (!recoveryToken) throw new Error('재설정 링크를 다시 요청해주세요.');
+  if (password.length < 8) throw new Error('비밀번호는 8자 이상 입력해주세요.');
+  await parse(
+    await fetch(`${url}/auth/v1/user`, {
+      method: 'PUT',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${recoveryToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ password }),
+    }),
+  );
+  recoveryToken = null;
+  remember(null);
 }

@@ -1,21 +1,314 @@
-import PosterVariants,{initialPosters,uploadPosters} from './PosterVariants';
+import PosterVariants, { initialPosters, uploadPosters } from './PosterVariants';
 import ProductionDate from './ProductionDate';
-import {useState,useEffect} from 'react';
+import { useState, useEffect } from 'react';
 import * as api from '../lib/api';
-import {datePart,timePart,rowErrors,sortSessions} from '../lib/domain';
-export default function EditExisting({production,sessions,onSaved,notify}){
- const [mode,setMode]=useState('production'),[selected,setSelected]=useState('');
- const session=sessions.find(s=>s.id===selected);
- return <><div className="admin-toolbar"><button className="secondary" onClick={()=>setMode('production')}>공연 정보 수정</button><button className="secondary" onClick={()=>setMode('session')}>회차 정보 수정 ({sessions.length})</button></div>{mode==='production'?<EditProduction key={production.id+production.updated_at} production={production} onSaved={onSaved} notify={notify}/>:<><label>수정할 회차<select value={selected} onChange={e=>setSelected(e.target.value)}><option value="">회차를 선택해주세요</option>{sortSessions(sessions).map(s=><option key={s.id} value={s.id}>{datePart(s.starts_at)} {timePart(s.starts_at)} · {s.casting_round||1}차</option>)}</select></label>{session&&<EditSession key={session.id+session.updated_at} session={session} production={production} onSaved={onSaved} notify={notify}/>}</>}</>;
+import { datePart, timePart, rowErrors, sortSessions } from '../lib/domain';
+export default function EditExisting({ production, sessions, onSaved, notify }) {
+  const [mode, setMode] = useState('production'),
+    [selected, setSelected] = useState('');
+  const session = sessions.find((s) => s.id === selected);
+  return (
+    <>
+      <div className="admin-toolbar">
+        <button className="secondary" onClick={() => setMode('production')}>
+          공연 정보 수정
+        </button>
+        <button className="secondary" onClick={() => setMode('session')}>
+          회차 정보 수정 ({sessions.length})
+        </button>
+      </div>
+      {mode === 'production' ? (
+        <EditProduction
+          key={production.id + production.updated_at}
+          production={production}
+          onSaved={onSaved}
+          notify={notify}
+        />
+      ) : (
+        <>
+          <label>
+            수정할 회차
+            <select value={selected} onChange={(e) => setSelected(e.target.value)}>
+              <option value="">회차를 선택해주세요</option>
+              {sortSessions(sessions).map((s) => (
+                <option key={s.id} value={s.id}>
+                  {datePart(s.starts_at)} {timePart(s.starts_at)} · {s.casting_round || 1}차
+                </option>
+              ))}
+            </select>
+          </label>
+          {session && (
+            <EditSession
+              key={session.id + session.updated_at}
+              session={session}
+              production={production}
+              onSaved={onSaved}
+              notify={notify}
+            />
+          )}
+        </>
+      )}
+    </>
+  );
 }
-function EditProduction({production:p,onSaved,notify}){
- const [confirmDelete,setConfirmDelete]=useState(false);
- const roles=p.roles??[];
- const [filterRoles,setFilterRoles]=useState(()=>(p.filter_roles??roles).filter(role=>roles.includes(role)));
- const [busy,setBusy]=useState(false),[error,setError]=useState(''),[posters,setPosters]=useState(()=>initialPosters(p));
- return <form className="panel form-stack" onSubmit={async e=>{e.preventDefault();setError('');const f=new FormData(e.currentTarget);const data={title:String(f.get('title')).trim(),venue:String(f.get('venue')).trim(),start_date:f.get('start_date'),end_date:f.get('end_date'),poster_url:p.poster_url,filter_roles:filterRoles};if(!data.title||!data.venue||data.start_date>data.end_date){setError('작품명·공연장·공연 기간을 확인해주세요.');return;}setBusy(true);const uploads=[];let committed=false;try{Object.assign(data,await uploadPosters(posters,uploads));await api.editProduction(p.id,p.updated_at,data);committed=true;notify('공연 정보를 수정했어요.');await onSaved();}catch(e){if(!committed)await Promise.all(uploads.map(upload=>api.removePoster(upload.path).catch(()=>{})));setError(e.message)}finally{setBusy(false)}}}><h2>공연 정보 수정</h2><label>작품명<input name="title" defaultValue={p.title} required maxLength={120} disabled={busy}/></label><label>공연장<input name="venue" defaultValue={p.venue} required maxLength={120} disabled={busy}/></label><div className="two-columns"><label>시작일<ProductionDate name="start_date" defaultValue={p.start_date} required disabled={busy}/></label><label>종료일<ProductionDate name="end_date" defaultValue={p.end_date} required disabled={busy}/></label></div><fieldset className="filter-role-settings" disabled={busy}><legend>배우 선택에 표시할 배역</legend><p className="helper">주연 등 원하는 배역을 선택해주세요. 선택한 배역만 공연 페이지의 배우 필터에 표시됩니다.</p>{roles.length?<div className="filter-role-options">{roles.map(role=><label className="checkbox-label" key={role}><input type="checkbox" checked={filterRoles.includes(role)} onChange={e=>setFilterRoles(current=>e.target.checked?[...current,role]:current.filter(item=>item!==role))}/>{role}</label>)}</div>:<p className="helper">캐스팅표를 등록하면 배역을 선택할 수 있어요.</p>}<p className="helper">{filterRoles.length}개 선택 · 선택하지 않은 배역도 회차 출연진에는 유지됩니다.</p></fieldset><PosterVariants value={posters} onChange={setPosters} disabled={busy}/>{error&&<p role="alert" className="error">{error}</p>}<button className="primary" disabled={busy}>{busy?'저장 중…':'공연 수정 저장'}</button><div className="delete-production-area">{!confirmDelete?<button type="button" className="secondary danger-button" disabled={busy} onClick={()=>setConfirmDelete(true)}>공연 삭제</button>:<div role="alert" className="delete-confirmation"><h3>정말 ‘{p.title}’ 공연을 삭제할까요?</h3><p>등록된 모든 회차와 관련 관심 회차가 함께 삭제됩니다. 되돌릴 수 없습니다.</p><div className="admin-toolbar"><button type="button" className="secondary" disabled={busy} onClick={()=>setConfirmDelete(false)}>취소</button><button type="button" className="primary danger-button" disabled={busy} onClick={async()=>{setBusy(true);setError('');try{await api.deleteProduction(p.id,p.updated_at);location.hash='/';notify('공연을 삭제했어요.');await onSaved();}catch(e){setError(e.message)}finally{setBusy(false)}}}>{busy?'삭제 중…':'네, 공연 삭제'}</button></div></div>}</div></form>;
+function EditProduction({ production: p, onSaved, notify }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const roles = p.roles ?? [];
+  const [filterRoles, setFilterRoles] = useState(() =>
+    (p.filter_roles ?? roles).filter((role) => roles.includes(role)),
+  );
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState(''),
+    [posters, setPosters] = useState(() => initialPosters(p));
+  return (
+    <form
+      className="panel form-stack"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setError('');
+        const f = new FormData(e.currentTarget);
+        const data = {
+          title: String(f.get('title')).trim(),
+          venue: String(f.get('venue')).trim(),
+          start_date: f.get('start_date'),
+          end_date: f.get('end_date'),
+          poster_url: p.poster_url,
+          filter_roles: filterRoles,
+        };
+        if (!data.title || !data.venue || data.start_date > data.end_date) {
+          setError('작품명·공연장·공연 기간을 확인해주세요.');
+          return;
+        }
+        setBusy(true);
+        const uploads = [];
+        let committed = false;
+        try {
+          Object.assign(data, await uploadPosters(posters, uploads));
+          await api.editProduction(p.id, p.updated_at, data);
+          committed = true;
+          notify('공연 정보를 수정했어요.');
+          await onSaved();
+        } catch (e) {
+          if (!committed)
+            await Promise.all(
+              uploads.map((upload) => api.removePoster(upload.path).catch(() => {})),
+            );
+          setError(e.message);
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <h2>공연 정보 수정</h2>
+      <label>
+        작품명
+        <input name="title" defaultValue={p.title} required maxLength={120} disabled={busy} />
+      </label>
+      <label>
+        공연장
+        <input name="venue" defaultValue={p.venue} required maxLength={120} disabled={busy} />
+      </label>
+      <div className="two-columns">
+        <label>
+          시작일
+          <ProductionDate name="start_date" defaultValue={p.start_date} required disabled={busy} />
+        </label>
+        <label>
+          종료일
+          <ProductionDate name="end_date" defaultValue={p.end_date} required disabled={busy} />
+        </label>
+      </div>
+      <fieldset className="filter-role-settings" disabled={busy}>
+        <legend>배우 선택에 표시할 배역</legend>
+        <p className="helper">
+          주연 등 원하는 배역을 선택해주세요. 선택한 배역만 공연 페이지의 배우 필터에 표시됩니다.
+        </p>
+        {roles.length ? (
+          <div className="filter-role-options">
+            {roles.map((role) => (
+              <label className="checkbox-label" key={role}>
+                <input
+                  type="checkbox"
+                  checked={filterRoles.includes(role)}
+                  onChange={(e) =>
+                    setFilterRoles((current) =>
+                      e.target.checked
+                        ? [...current, role]
+                        : current.filter((item) => item !== role),
+                    )
+                  }
+                />
+                {role}
+              </label>
+            ))}
+          </div>
+        ) : (
+          <p className="helper">캐스팅표를 등록하면 배역을 선택할 수 있어요.</p>
+        )}
+        <p className="helper">
+          {filterRoles.length}개 선택 · 선택하지 않은 배역도 회차 출연진에는 유지됩니다.
+        </p>
+      </fieldset>
+      <PosterVariants value={posters} onChange={setPosters} disabled={busy} />
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+      <button className="primary" disabled={busy}>
+        {busy ? '저장 중…' : '공연 수정 저장'}
+      </button>
+      <div className="delete-production-area">
+        {!confirmDelete ? (
+          <button
+            type="button"
+            className="secondary danger-button"
+            disabled={busy}
+            onClick={() => setConfirmDelete(true)}
+          >
+            공연 삭제
+          </button>
+        ) : (
+          <div role="alert" className="delete-confirmation">
+            <h3>정말 ‘{p.title}’ 공연을 삭제할까요?</h3>
+            <p>등록된 모든 회차와 관련 관심 회차가 함께 삭제됩니다. 되돌릴 수 없습니다.</p>
+            <div className="admin-toolbar">
+              <button
+                type="button"
+                className="secondary"
+                disabled={busy}
+                onClick={() => setConfirmDelete(false)}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                className="primary danger-button"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError('');
+                  try {
+                    await api.deleteProduction(p.id, p.updated_at);
+                    location.hash = '/';
+                    notify('공연을 삭제했어요.');
+                    await onSaved();
+                  } catch (e) {
+                    setError(e.message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {busy ? '삭제 중…' : '네, 공연 삭제'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </form>
+  );
 }
-function EditSession({session,production,onSaved,notify}){
- const [row,setRow]=useState(()=>structuredClone(session)),[busy,setBusy]=useState(false),[error,setError]=useState('');
- return <form className="panel form-stack" onSubmit={async e=>{e.preventDefault();const errors=rowErrors([row],production)[0];if(errors.length){setError(errors.join(' '));return;}setBusy(true);setError('');try{await api.editPerformance(session.id,session.updated_at,{starts_at:row.starts_at,casting_round:row.casting_round||1,cast:row.cast});notify('회차 정보를 수정했어요.');await onSaved();}catch(e){setError(e.message)}finally{setBusy(false)}}}><h2>회차 정보 수정</h2><div className="two-columns"><label>날짜<input type="date" required value={datePart(row.starts_at)} disabled={busy} onChange={e=>setRow({...row,starts_at:`${e.target.value}T${timePart(row.starts_at)}:00`})}/></label><label>시간<input type="time" required value={timePart(row.starts_at)} disabled={busy} onChange={e=>setRow({...row,starts_at:`${datePart(row.starts_at)}T${e.target.value}:00`})}/></label></div><label>티켓 오픈 차수<input type="number" required min="1" max="2147483647" step="1" disabled={busy} value={row.casting_round??1} onChange={e=>setRow({...row,casting_round:Number(e.target.value)})}/></label><div className="two-columns">{row.cast.map(c=><label key={c.role}>{c.role}<input required maxLength={80} disabled={busy} value={c.actor} onChange={e=>setRow({...row,cast:row.cast.map(x=>x.role===c.role?{...x,actor:e.target.value}:x)})}/></label>)}</div>{error&&<p className="error" role="alert">{error}</p>}<button className="primary" disabled={busy}>{busy?'저장 중…':'회차 수정 저장'}</button></form>;
+function EditSession({ session, production, onSaved, notify }) {
+  const [row, setRow] = useState(() => structuredClone(session)),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState('');
+  return (
+    <form
+      className="panel form-stack"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const errors = rowErrors([row], production)[0];
+        if (errors.length) {
+          setError(errors.join(' '));
+          return;
+        }
+        setBusy(true);
+        setError('');
+        try {
+          await api.editPerformance(session.id, session.updated_at, {
+            starts_at: row.starts_at,
+            casting_round: row.casting_round || 1,
+            cast: row.cast,
+          });
+          notify('회차 정보를 수정했어요.');
+          await onSaved();
+        } catch (e) {
+          setError(e.message);
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <h2>회차 정보 수정</h2>
+      <div className="two-columns">
+        <label>
+          날짜
+          <input
+            type="date"
+            required
+            value={datePart(row.starts_at)}
+            disabled={busy}
+            onChange={(e) =>
+              setRow({ ...row, starts_at: `${e.target.value}T${timePart(row.starts_at)}:00` })
+            }
+          />
+        </label>
+        <label>
+          시간
+          <input
+            type="time"
+            required
+            value={timePart(row.starts_at)}
+            disabled={busy}
+            onChange={(e) =>
+              setRow({ ...row, starts_at: `${datePart(row.starts_at)}T${e.target.value}:00` })
+            }
+          />
+        </label>
+      </div>
+      <label>
+        티켓 오픈 차수
+        <input
+          type="number"
+          required
+          min="1"
+          max="2147483647"
+          step="1"
+          disabled={busy}
+          value={row.casting_round ?? 1}
+          onChange={(e) => setRow({ ...row, casting_round: Number(e.target.value) })}
+        />
+      </label>
+      <div className="two-columns">
+        {row.cast.map((c) => (
+          <label key={c.role}>
+            {c.role}
+            <input
+              required
+              maxLength={80}
+              disabled={busy}
+              value={c.actor}
+              onChange={(e) =>
+                setRow({
+                  ...row,
+                  cast: row.cast.map((x) =>
+                    x.role === c.role ? { ...x, actor: e.target.value } : x,
+                  ),
+                })
+              }
+            />
+          </label>
+        ))}
+      </div>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <button className="primary" disabled={busy}>
+        {busy ? '저장 중…' : '회차 수정 저장'}
+      </button>
+    </form>
+  );
 }
