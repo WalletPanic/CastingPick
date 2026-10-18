@@ -200,10 +200,11 @@ fieldset {
 }
 .home-hero {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  text-align: center;
   margin: 4px 0 34px;
-  gap: 28px;
+  padding: 16px 0 8px;
 }
 .home-hero h1 {
   font-size: 44px;
@@ -213,46 +214,6 @@ fieldset {
   font-size: 14px;
   color: var(--muted);
   margin-top: 18px;
-}
-.hero-ticket {
-  position: relative;
-  width: 210px;
-  height: 210px;
-  background: var(--lilac);
-  color: var(--plum);
-  border: 1px solid #ded0da;
-  transform: rotate(7deg);
-  padding: 23px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  overflow: hidden;
-}
-.hero-ticket:after {
-  position: absolute;
-  content: '';
-  border-top: 1px dashed #c9b5c3;
-  left: 0;
-  right: 0;
-  bottom: 42px;
-}
-.hero-ticket > span {
-  font-size: 9px;
-  letter-spacing: 2px;
-}
-.hero-ticket strong {
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: -1px;
-  line-height: 1.4;
-}
-.ticket-star {
-  position: absolute;
-  right: 12px;
-  top: 57px;
-  font-size: 80px;
-  color: var(--mauve);
-  opacity: 0.4;
 }
 .search-field {
   display: flex;
@@ -1031,9 +992,6 @@ fieldset {
   .home-hero {
     margin-bottom: 42px;
   }
-  .hero-ticket {
-    margin-right: 50px;
-  }
   .admin-page {
     max-width: 980px;
     margin: auto;
@@ -1058,7 +1016,7 @@ fieldset {
   }
   .home-hero {
     margin: 8px 0 27px;
-    gap: 12px;
+    padding: 8px 0;
   }
   .home-hero h1 {
     font-size: 34px;
@@ -1071,29 +1029,6 @@ fieldset {
   .eyebrow {
     font-size: 8px;
     letter-spacing: 1.4px;
-  }
-  .hero-ticket {
-    width: 112px;
-    height: 158px;
-    padding: 13px;
-    flex-shrink: 0;
-    transform: rotate(8deg);
-  }
-  .hero-ticket strong {
-    font-size: 18px;
-    letter-spacing: -0.8px;
-  }
-  .hero-ticket > span {
-    font-size: 6px;
-    letter-spacing: 0.7px;
-  }
-  .hero-ticket:after {
-    bottom: 29px;
-  }
-  .ticket-star {
-    font-size: 51px;
-    top: 41px;
-    right: 4px;
   }
   .mobile-only {
     display: initial;
@@ -1338,13 +1273,6 @@ fieldset {
   }
   .home-hero h1 {
     font-size: 29px;
-  }
-  .hero-ticket {
-    width: 92px;
-    height: 144px;
-  }
-  .hero-ticket strong {
-    font-size: 16px;
   }
   .eyebrow {
     font-size: 7px;

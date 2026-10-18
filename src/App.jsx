@@ -481,15 +481,6 @@ function Home({ productions, showAll = false }) {
             <br className="mobile-only" /> 다음 관극의 순간.
           </p>
         </div>
-        <div className="hero-ticket" aria-hidden="true">
-          <span>YOUR NEXT</span>
-          <strong>
-            뮤지컬의
-            <br />한 장면
-          </strong>
-          <div className="ticket-star">✳</div>
-          <span>CASTING PICK — 2026</span>
-        </div>
       </div>
       <form
         className="search-field"
