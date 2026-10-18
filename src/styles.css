@@ -203,14 +203,15 @@ fieldset {
   justify-content: center;
   align-items: center;
   text-align: center;
-  margin: 4px 0 34px;
-  padding: 16px 0 8px;
+  margin: 0 0 28px;
+  padding: 8px 0 4px;
 }
 .home-hero h1 {
   font-size: 44px;
   letter-spacing: -2px;
 }
 .home-hero p {
+  white-space: nowrap;
   font-size: 14px;
   color: var(--muted);
   margin-top: 18px;
@@ -990,7 +991,7 @@ fieldset {
     padding-top: 54px;
   }
   .home-hero {
-    margin-bottom: 42px;
+    margin-bottom: 32px;
   }
   .admin-page {
     max-width: 980px;
@@ -1015,8 +1016,8 @@ fieldset {
     padding: 30px 22px 40px;
   }
   .home-hero {
-    margin: 8px 0 27px;
-    padding: 8px 0;
+    margin: 4px 0 22px;
+    padding: 4px 0;
   }
   .home-hero h1 {
     font-size: 34px;

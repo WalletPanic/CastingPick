@@ -476,10 +476,7 @@ function Home({ productions, showAll = false }) {
             보고 싶은 배우,
             <br />볼 수 있는 날<span className="title-dot">.</span>
           </h1>
-          <p>
-            나만의 캐스팅으로 찾는
-            <br className="mobile-only" /> 다음 관극의 순간.
-          </p>
+          <p>나만의 캐스팅으로 찾는 다음 관극의 순간.</p>
         </div>
       </div>
       <form
